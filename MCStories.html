@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Browse Stories — The Erotic Mind-Control Story Archive</title>
+<meta name="description" content="Every story in the archive, one page, filterable by category and sortable by title, date, or length."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15120e;
+    --ink-2:#1d1912;
+    --ink-3:#242018;
+    --parchment:#ede3cf;
+    --parchment-dim:#c9bfa8;
+    --brass:#a8823e;
+    --brass-bright:#d9b46a;
+    --muted:#9c948a;
+    --focus:#d9b46a;
+    --line:#3a3327;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ background:var(--ink); }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #241d13 0%, transparent 60%),
+      var(--ink);
+    color:var(--parchment);
+    font-family:'Source Serif 4', Georgia, serif;
+    line-height:1.5;
+  }
+
+  a{ color:inherit; }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .row:focus-visible, summary:focus-visible, .author-story-item:focus-visible{
+    outline:2px solid var(--focus);
+    outline-offset:2px;
+    border-radius:2px;
+  }
+
+  .wrap{
+    max-width:1280px;
+    margin:0 auto;
+    padding:3rem 1.5rem 4rem;
+    transition:margin-left .3s ease;
+  }
+
+  header{ margin-bottom:1.5rem; }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin:0 0 .6rem;
+  }
+
+  header a.back{ text-decoration:none; color:var(--muted); }
+  header a.back:hover{ color:var(--parchment); }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(1.7rem, 4vw, 2.4rem);
+    line-height:1.1;
+    margin:.3rem 0 .5rem;
+    letter-spacing:-.01em;
+  }
+
+  .subhead{ color:var(--parchment-dim); font-size:.95rem; margin:0; }
+
+  /* --- Two-column page layout --- */
+  .page{
+    display:flex;
+    gap:2rem;
+    align-items:flex-start;
+  }
+
+  .main-col{
+    flex:1;
+    min-width:0;
+  }
+
+  .sidebar{
+    width:300px;
+    flex-shrink:0;
+    position:sticky;
+    top:0;
+    max-height:100vh;
+    overflow-y:auto;
+    padding:1.25rem 0 2rem 1.25rem;
+    border-left:1px solid var(--line);
+  }
+
+  @media (max-width:900px){
+    .page{ flex-direction:column; }
+    .sidebar{
+      width:100%;
+      position:static;
+      max-height:none;
+      overflow-y:visible;
+      border-left:none;
+      border-top:1px solid var(--line);
+      padding:1.25rem 0 0;
+      margin-top:1.5rem;
+    }
+  }
+
+  /* --- Author mini-portfolio panel ---
+     Slides in from the left and pushes .wrap to the right (eating into
+     what was the centered page's right-hand whitespace) rather than
+     overlaying the page, so search/filters stay visible and usable. */
+  .author-panel{
+    position:fixed;
+    top:0; left:0; bottom:0;
+    width:380px;
+    max-width:88vw;
+    background:var(--ink-2);
+    border-right:1px solid var(--line);
+    box-shadow:12px 0 28px rgba(0,0,0,.45);
+    z-index:60;
+    transform:translateX(-100%);
+    transition:transform .3s ease;
+    overflow-y:auto;
+    padding:1.5rem 1.35rem 2rem;
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+  }
+  .author-panel.open{ transform:translateX(0); }
+
+  /* Push the whole page over to the opposite (right) edge of the screen
+     rather than just nudging it — drop the centering max-width so .wrap
+     fills all the way from the panel to the right side of the viewport. */
+  body.author-panel-open .wrap{ margin-left:380px; margin-right:0; max-width:none; }
+
+  .author-panel-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.75rem;
+  }
+  .author-panel-eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin:0 0 .3rem;
+  }
+  .author-panel-head h2{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:1.25rem;
+    margin:0;
+    line-height:1.25;
+  }
+  .author-panel-meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.7rem;
+    color:var(--muted);
+    margin:.4rem 0 0;
+  }
+  .author-panel-close{
+    flex-shrink:0;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    font-size:1.1rem;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .author-panel-close:hover{ color:var(--parchment); border-color:var(--brass); }
+
+  .author-panel-sort{
+    display:flex;
+    flex-wrap:nowrap;
+    gap:.3rem;
+  }
+  .author-sort-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    letter-spacing:.01em;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:.3rem .4rem;
+    border-radius:2px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex:1 1 auto;
+    min-width:0;
+    white-space:nowrap;
+    gap:.25rem;
+  }
+  .author-sort-btn:hover{ color:var(--parchment); border-color:var(--brass); }
+  .author-sort-btn.active{
+    background:none;
+    border-color:var(--brass);
+    color:var(--brass-bright);
+    font-weight:500;
+  }
+  .author-sort-btn .arrow{ font-size:.7rem; line-height:1; }
+
+  .author-panel-list{
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+    border-top:1px solid var(--line);
+    padding-top:.5rem;
+  }
+  /* Reuses the .author-story-item styling from the full Authors view so an
+     item expands in place to show its synopsis, tags, and chapters. */
+  .author-panel-list .author-story-item{ padding-right:2.1rem; }
+
+  #author-panel-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.5);
+    z-index:55;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+  }
+
+  @media (max-width:700px){
+    .author-panel{ width:100%; max-width:100%; }
+    body.author-panel-open .wrap{ margin-left:0; }
+    #author-panel-backdrop.show{ opacity:1; pointer-events:auto; }
+  }
+
+  /* --- Main column controls --- */
+  .controls-main{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:
+      linear-gradient(var(--ink) 88%, transparent),
+      var(--ink);
+    padding:1.25rem 0 1rem;
+    margin-bottom:1.5rem;
+    border-bottom:1px solid var(--line);
+  }
+
+  @media (max-width:900px){
+    .controls-main{ position:static; background:none; }
+  }
+
+  .search-row{
+    display:flex;
+    gap:.75rem;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  #search{
+    flex:1 1 220px;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    color:var(--parchment);
+    font-family:'Source Serif 4', Georgia, serif;
+    font-size:1rem;
+    padding:.65rem .9rem;
+    border-radius:2px;
+  }
+  #search::placeholder{ color:var(--muted); }
+  #search:focus-visible{ border-color:var(--brass); }
+
+  .sort-group{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+  }
+
+  .sort-group label{ color:var(--muted); }
+
+  select{
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    color:var(--parchment);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    padding:.5rem .6rem;
+    border-radius:2px;
+  }
+
+  .mode-toggle{
+    display:inline-flex;
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .mode-toggle button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.05em;
+    background:var(--ink-2);
+    color:var(--muted);
+    border:none;
+    padding:.5rem .7rem;
+    cursor:pointer;
+  }
+  .mode-toggle button.active{
+    background:var(--brass);
+    color:var(--ink);
+    font-weight:500;
+  }
+
+  /* --- Sidebar: match toggle --- */
+  .sidebar-top{
+    margin-bottom:1rem;
+    /* Nudges the Match toggle down to line up with the Stories/Authors
+       toggle, which sits vertically centered against the taller search
+       input in its row rather than flush with the top padding. */
+    margin-top:.35rem;
+  }
+  .sidebar-top .sort-group{ justify-content:space-between; width:100%; }
+
+  .tag-hint{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    color:var(--muted);
+    margin:0 0 .8rem;
+    line-height:1.4;
+  }
+
+  /* --- Tag group dropdowns --- */
+  .tag-groups{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    margin-bottom:1.5rem;
+  }
+
+  .tag-group{
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:var(--ink-2);
+  }
+  .tag-group[open]{ border-color:#4a4130; }
+
+  .tag-group summary{
+    cursor:pointer;
+    list-style:none;
+    padding:.65rem .8rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.76rem;
+    letter-spacing:.03em;
+    color:var(--parchment-dim);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .tag-group summary::-webkit-details-marker{ display:none; }
+  .tag-group summary:hover{ color:var(--parchment); }
+
+  .summary-right{ display:flex; align-items:center; gap:.5rem; }
+
+  .group-badge{
+    background:var(--brass);
+    color:var(--ink);
+    font-size:.66rem;
+    font-weight:600;
+    padding:.05rem .4rem;
+    border-radius:10px;
+    display:none;
+    line-height:1.4;
+  }
+  .group-badge.show{ display:inline-block; }
+
+  .chevron{
+    color:var(--muted);
+    transition:transform .2s ease;
+    font-size:.7rem;
+  }
+  .tag-group[open] .chevron{ transform:rotate(90deg); }
+
+  .tag-group .tag-row{
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+    padding:.5rem .7rem .75rem;
+    border-top:1px solid var(--line);
+  }
+
+  .tag-chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    line-height:1.3;
+    background:var(--ink);
+    border:1px solid var(--line);
+    color:var(--parchment-dim);
+    padding:.45rem .6rem;
+    border-radius:2px;
+    cursor:pointer;
+    user-select:none;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:.6rem;
+    text-align:left;
+  }
+  .tag-chip:hover{ border-color:var(--brass); color:var(--parchment); }
+  .tag-chip.active{
+    background:var(--brass);
+    border-color:var(--brass);
+    color:var(--ink);
+    font-weight:500;
+  }
+  .tag-chip.excluded{
+    background:var(--ink);
+    border-color:#7a2a2a;
+    color:#c98c8c;
+    text-decoration:line-through;
+    text-decoration-color:#7a2a2a;
+  }
+  .tag-chip.excluded:hover{ border-color:#a34848; color:#e0a3a3; }
+  .tag-chip .count{ opacity:.65; font-size:.9em; flex-shrink:0; }
+  .tag-chip.active .count{ opacity:.75; }
+  .tag-chip.excluded .count{ opacity:.6; }
+
+  /* --- Sort dropdowns (sidebar) --- */
+  .sort-content{
+    display:flex;
+    flex-direction:column;
+    gap:.65rem;
+    padding:.6rem .8rem .8rem;
+    border-top:1px solid var(--line);
+  }
+
+  .sort-badge{ text-transform:none; }
+
+  .range-slider{
+    position:relative;
+    height:1.4rem;
+    margin-bottom:.3rem;
+  }
+
+  .range-slider .track{
+    position:absolute;
+    top:50%; left:0; right:0;
+    height:3px;
+    background:var(--line);
+    transform:translateY(-50%);
+    border-radius:2px;
+  }
+  .range-slider .track-fill{
+    position:absolute;
+    top:50%; height:3px;
+    background:var(--brass);
+    transform:translateY(-50%);
+    border-radius:2px;
+  }
+
+  .range-slider input[type="range"]{
+    position:absolute;
+    left:0; top:50%;
+    width:100%;
+    transform:translateY(-50%);
+    margin:0;
+    background:transparent;
+    -webkit-appearance:none;
+    appearance:none;
+    pointer-events:none;
+    height:0;
+  }
+  .range-slider input[type="range"]::-webkit-slider-thumb{
+    pointer-events:auto;
+    -webkit-appearance:none;
+    appearance:none;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--brass-bright);
+    border:2px solid var(--ink);
+    cursor:pointer;
+    margin-top:0;
+  }
+  .range-slider input[type="range"]::-moz-range-thumb{
+    pointer-events:auto;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--brass-bright);
+    border:2px solid var(--ink);
+    cursor:pointer;
+  }
+  .range-slider input[type="range"]::-moz-range-track{ background:transparent; border:none; }
+
+  .range-labels{
+    display:flex;
+    justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.7rem;
+    color:var(--parchment-dim);
+  }
+
+  .clear-link{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.74rem;
+    color:var(--muted);
+    background:none;
+    border:none;
+    text-decoration:underline;
+    text-underline-offset:3px;
+    cursor:pointer;
+    padding:.4rem 0;
+  }
+  .clear-link:hover{ color:var(--parchment); }
+
+  .status-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:1rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    color:var(--muted);
+  }
+
+  .status-row-right{
+    display:flex;
+    align-items:center;
+    gap:.9rem;
+    margin-left:auto;
+  }
+  .status-row-right .clear-link{ padding:.2rem 0; }
+  /* Search-scope toggle: same segmented look and size as Stories/Authors.
+     Each button is given the same fixed width those two buttons end up with
+     (their labels are the same length), so Title/Synopsis match instead of
+     sizing to their own text. */
+  .scope-toggle[hidden]{ display:none; }
+  .scope-toggle button{ width:4.675rem; padding-left:0; padding-right:0; }
+
+  /* --- Results --- */
+  #results{ display:grid; grid-template-columns:1fr; gap:.4rem; }
+
+  .row{
+    display:block;
+    position:relative;
+    padding:.85rem 3.15rem .85rem .95rem;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:var(--ink-2);
+    margin-bottom:.4rem;
+    cursor:pointer;
+  }
+  .row:hover{ border-color:var(--brass); }
+  .row.expanded{ border-color:var(--brass); }
+
+  .row-top{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:.5rem;
+  }
+
+  .row .name{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:1.08rem;
+    color:var(--parchment);
+    text-decoration:none;
+    flex-shrink:0;
+  }
+
+  /* --- Bookmarks --- */
+  .bookmark-btn{
+    position:absolute;
+    top:-9px;
+    right:1.2rem;
+    width:34px;
+    height:40px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    box-shadow:0 4px 7px rgba(0,0,0,.4);
+    color:var(--muted);
+    cursor:pointer;
+    padding:0 0 .4rem;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    line-height:0;
+    flex-shrink:0;
+    transition:background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .bookmark-btn svg{ width:19px; height:19px; display:block; }
+  .bookmark-btn:hover{ color:var(--brass-bright); border-color:var(--brass); }
+  .bookmark-btn:active{ transform:translateY(1px); }
+  .bookmark-btn.active{ background:var(--brass); border-color:var(--brass); color:var(--ink); }
+  .bookmark-btn.active:hover{ background:var(--brass-bright); border-color:var(--brass-bright); }
+  /* .small variant sits in a borderless, scrollable list (author-story-item),
+     so it stays a plain icon rather than a hanging tag — a tab has no edge
+     to hang from there, and would get clipped by the scroll area. */
+  .bookmark-btn.small{
+    top:.3rem; right:.15rem;
+    width:22px; height:22px;
+    background:none;
+    border:none;
+    box-shadow:none;
+    border-radius:50%;
+    padding:0;
+    align-items:center;
+  }
+  .bookmark-btn.small svg{ width:13px; height:13px; }
+  .bookmark-btn.small:hover{ background:var(--ink); color:var(--brass-bright); }
+  .bookmark-btn.small.active{ background:none; color:var(--brass-bright); }
+  .bookmark-btn.small.active:hover{ background:var(--ink); }
+
+  .saved-toggle{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    letter-spacing:.02em;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:.6rem .8rem;
+    border-radius:2px;
+    cursor:pointer;
+    white-space:nowrap;
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+  }
+  .saved-toggle svg{ width:14px; height:14px; flex-shrink:0; }
+  .saved-toggle:hover{ color:var(--parchment); border-color:var(--brass); }
+  .saved-toggle.active{
+    background:var(--brass);
+    border-color:var(--brass);
+    color:var(--ink);
+    font-weight:500;
+  }
+  .saved-toggle.excluded{
+    background:var(--ink);
+    border-color:#7a2a2a;
+    color:#c98c8c;
+  }
+  .saved-toggle.excluded:hover{ border-color:#a34848; color:#e0a3a3; }
+
+  .row .dash, .author-story-item > .row-top .dash{
+    color:var(--line);
+    flex-shrink:0;
+  }
+
+  .row .expand-indicator{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    color:var(--muted);
+    flex-shrink:0;
+  }
+
+  .row .meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    color:var(--brass);
+    letter-spacing:.01em;
+    min-width:0;
+  }
+
+  .author-story-item > .row-top .meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    color:var(--parchment-dim);
+    letter-spacing:.01em;
+    min-width:0;
+  }
+
+  .row .meta .sep, .author-story-item > .row-top .meta .sep{ color:var(--line); margin:0 .45em; }
+  .row .meta .pending{ color:var(--muted); font-style:italic; }
+
+  /* Top-level story entries in the author view reuse the main list's
+     title-dash-meta header line, just at the smaller author-list scale. */
+  .author-story-item > .row-top{ flex-wrap:wrap; }
+  .author-story-item > .row-top .dash{ display:none; }
+  .author-story-item > .row-top .meta{ flex:0 0 100%; }
+  .author-story-item > .row-top .meta .meta-line{ display:block; }
+  .author-story-item > .row-top .meta .nowrap{ white-space:nowrap; }
+  .author-story-item > .row-top .meta .vsep{
+    display:inline-block;
+    width:3px;
+    height:3px;
+    border-radius:50%;
+    margin:0 .7em;
+    background:var(--brass);
+    opacity:.6;
+    vertical-align:.25em;
+  }
+  .author-story-item > .row-top .name{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:.92rem;
+    color:var(--parchment);
+    text-decoration:none;
+    flex-shrink:0;
+  }
+
+  .author-link{
+    font:inherit;
+    color:var(--brass-bright);
+    font-weight:500;
+    background:none;
+    border:none;
+    padding:0;
+    margin:0;
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-color:transparent;
+    text-underline-offset:2px;
+    transition:text-decoration-color .15s ease, color .15s ease;
+  }
+  .author-link:hover, .author-link:focus-visible{
+    color:var(--brass-bright);
+    text-decoration-color:var(--brass-bright);
+  }
+
+  .row .synopsis{
+    font-size:.88rem;
+    color:var(--parchment-dim);
+    margin:.4rem 0 0;
+    line-height:1.4;
+  }
+
+  .expanded-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.4rem;
+    margin-top:.65rem;
+  }
+  .expanded-tags .tag-chip{
+    display:inline-flex;
+    width:auto;
+    border-radius:20px;
+    padding:.35rem .7rem;
+    font-size:.7rem;
+  }
+
+  /* --- Author view --- */
+  .author-row .expand-indicator{ color:var(--brass-bright); }
+
+  .author-stories{
+    margin-top:.65rem;
+    max-height:320px;
+    overflow-y:auto;
+    border-top:1px solid var(--line);
+    padding-top:.5rem;
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+  }
+
+  .author-story-item{
+    display:block;
+    position:relative;
+    padding:.4rem 1.9rem .4rem .2rem;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  .author-story-item:hover{ background:var(--ink-3); }
+  a.author-story-item.chapter-link{ color:inherit; text-decoration:none; }
+  .author-story-item.expanded{ background:var(--ink-3); }
+
+  .story-item-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:.75rem;
+  }
+
+  .author-story-item .story-item-name{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:.92rem;
+    color:var(--parchment);
+    text-decoration:none;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .author-story-item .meta-mini{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    color:var(--muted);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+
+  .author-story-item .synopsis{ margin-top:.4rem; }
+  .author-story-item .expanded-tags{ margin-top:.5rem; }
+
+
+  .read-story-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    margin-top:.65rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.05em;
+    background:var(--brass);
+    color:var(--ink);
+    font-weight:500;
+    border:none;
+    border-radius:999px;
+    padding:.5rem 1rem;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .read-story-btn:hover{ background:var(--brass-bright); }
+
+  .empty-state{
+    text-align:center;
+    padding:3rem 1rem;
+    color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.85rem;
+  }
+
+  #sentinel{ height:1px; }
+
+  footer{
+    border-top:1px solid var(--line);
+    margin-top:2.5rem;
+    padding-top:1.25rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    color:var(--muted);
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div id="author-panel-backdrop"></div>
+<aside id="author-panel" class="author-panel" aria-hidden="true">
+  <div class="author-panel-head">
+    <div>
+      <p class="author-panel-eyebrow">Author</p>
+      <h2 id="author-panel-name"></h2>
+      <p class="author-panel-meta" id="author-panel-meta"></p>
+    </div>
+    <button type="button" class="author-panel-close" id="author-panel-close" aria-label="Close">&times;</button>
+  </div>
+  <div class="author-panel-sort" id="author-panel-sort">
+    <button type="button" class="author-sort-btn" data-field="title">Title</button>
+    <button type="button" class="author-sort-btn" data-field="added">Date Added</button>
+    <button type="button" class="author-sort-btn" data-field="updated">Updated</button>
+    <button type="button" class="author-sort-btn" data-field="words">Word Count</button>
+  </div>
+  <div class="author-panel-list" id="author-panel-list"></div>
+</aside>
+
+<div class="wrap">
+
+
+  <header>
+    <p class="eyebrow"><a class="back" href="https://mcstories.com/index.html" target="_blank" rel="noopener noreferrer">← The Archive</a></p>
+    <h1 id="pagetitle">Browse every story</h1>
+    <p class="subhead" id="totalcount"></p>
+  </header>
+
+  <div class="page">
+
+    <div class="main-col">
+      <div class="controls-main">
+        <div class="search-row">
+          <input type="text" id="search" placeholder="Search titles…" autocomplete="off"/>
+          <button type="button" id="saved-toggle" class="saved-toggle" aria-pressed="false"><span class="saved-toggle-icon"></span><span class="saved-toggle-label">Saved</span></button>
+          <div class="mode-toggle" role="group" aria-label="Browse by">
+            <button type="button" id="view-stories" class="active">Stories</button>
+            <button type="button" id="view-authors">Authors</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <span id="resultcount"></span>
+        <div class="status-row-right">
+          <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
+          <div class="mode-toggle scope-toggle" id="scope-toggle" role="group" aria-label="Search in">
+            <button type="button" id="scope-title" class="active">Title</button>
+            <button type="button" id="scope-synopsis">Synopsis</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="results"></div>
+      <div class="empty-state" id="emptystate" hidden>No stories match those filters.</div>
+      <div id="sentinel"></div>
+
+      <footer>
+        Data assembled from the archive's own category and story pages · tags are the site's, not ours to redefine
+      </footer>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="sort-group">
+          <span>Match</span>
+          <div class="mode-toggle" role="group" aria-label="Tag match mode">
+            <button type="button" id="mode-and" class="active">All tags</button>
+            <button type="button" id="mode-or">Any tag</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tag-groups" id="sortgroups">
+
+        <details class="tag-group sort-dd" data-field="title">
+          <summary><span class="summary-label" data-stories-label="Sort: Title" data-authors-label="Sort: Author Name">Sort: Title</span>
+            <span class="summary-right">
+              <span class="group-badge sort-badge" data-field="title"></span>
+              <span class="chevron">▸</span>
+            </span>
+          </summary>
+          <div class="sort-content">
+            <div class="mode-toggle dir-toggle" data-field="title" role="group" aria-label="Title sort direction">
+              <button type="button" data-dir="desc">High → Low</button>
+              <button type="button" data-dir="asc">Low → High</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="tag-group sort-dd" data-field="words">
+          <summary><span class="summary-label" data-stories-label="Sort: Word Count" data-authors-label="Sort: Total Words">Sort: Word Count</span>
+            <span class="summary-right">
+              <span class="group-badge sort-badge" data-field="words"></span>
+              <span class="chevron">▸</span>
+            </span>
+          </summary>
+          <div class="sort-content">
+            <div class="mode-toggle dir-toggle" data-field="words" role="group" aria-label="Word count sort direction">
+              <button type="button" data-dir="desc">High → Low</button>
+              <button type="button" data-dir="asc">Low → High</button>
+            </div>
+            <div class="range-slider" id="slider-words">
+              <div class="track"></div>
+              <div class="track-fill"></div>
+              <input type="range" class="thumb-min"/>
+              <input type="range" class="thumb-max"/>
+            </div>
+            <div class="range-labels"><span id="words-min-label"></span><span id="words-max-label"></span></div>
+          </div>
+        </details>
+
+        <details class="tag-group sort-dd" data-field="added" open>
+          <summary><span class="summary-label" data-stories-label="Sort: Date Added" data-authors-label="Sort: Latest Story Added">Sort: Date Added</span>
+            <span class="summary-right">
+              <span class="group-badge sort-badge" data-field="added"></span>
+              <span class="chevron">▸</span>
+            </span>
+          </summary>
+          <div class="sort-content">
+            <div class="mode-toggle dir-toggle" data-field="added" role="group" aria-label="Date added sort direction">
+              <button type="button" data-dir="desc">High → Low</button>
+              <button type="button" data-dir="asc">Low → High</button>
+            </div>
+            <div class="range-slider" id="slider-added">
+              <div class="track"></div>
+              <div class="track-fill"></div>
+              <input type="range" class="thumb-min"/>
+              <input type="range" class="thumb-max"/>
+            </div>
+            <div class="range-labels"><span id="added-min-label"></span><span id="added-max-label"></span></div>
+          </div>
+        </details>
+
+        <details class="tag-group sort-dd" data-field="updated">
+          <summary><span class="summary-label" data-stories-label="Sort: Date Updated" data-authors-label="Sort: Latest Story Updated">Sort: Date Updated</span>
+            <span class="summary-right">
+              <span class="group-badge sort-badge" data-field="updated"></span>
+              <span class="chevron">▸</span>
+            </span>
+          </summary>
+          <div class="sort-content">
+            <div class="mode-toggle dir-toggle" data-field="updated" role="group" aria-label="Date updated sort direction">
+              <button type="button" data-dir="desc">High → Low</button>
+              <button type="button" data-dir="asc">Low → High</button>
+            </div>
+            <div class="range-slider" id="slider-updated">
+              <div class="track"></div>
+              <div class="track-fill"></div>
+              <input type="range" class="thumb-min"/>
+              <input type="range" class="thumb-max"/>
+            </div>
+            <div class="range-labels"><span id="updated-min-label"></span><span id="updated-max-label"></span></div>
+          </div>
+        </details>
+
+      </div>
+
+      <div class="tag-groups" id="taggroups"></div>
+    </aside>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var resultsEl = document.getElementById('results');
+
+  resultsEl.innerHTML = '<div class="empty-state" id="loadingstate">Loading stories…</div>';
+
+  fetch('stories.json')
+    .then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data){
+      init(data.stories, data.tags);
+    })
+    .catch(function(err){
+      resultsEl.innerHTML = '<div class="empty-state">Couldn\u2019t load story data (' + escapeErr(err.message) +
+        '). If you\u2019re opening this file directly from disk, try serving it from a local web server instead \u2014 ' +
+        'browsers block this kind of file loading for security reasons when a page is opened as a plain file.</div>';
+    });
+
+  function escapeErr(str){
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function init(stories, tagDefs){
+  var BOOKMARK_KEY = 'storyArchive.bookmarks.v1';
+
+  function loadBookmarks(){
+    try {
+      var raw = localStorage.getItem(BOOKMARK_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch(e){ return new Set(); }
+  }
+  var BASE_URL = 'https://mcstories.com/';
+  function storyUrl(href){ return BASE_URL + href; }
+  var bookmarks = loadBookmarks();
+  function saveBookmarks(){
+    try { localStorage.setItem(BOOKMARK_KEY, JSON.stringify(Array.from(bookmarks))); } catch(e){}
+  }
+  function toggleBookmark(href){
+    if (!href) return;
+    if (bookmarks.has(href)) bookmarks.delete(href);
+    else bookmarks.add(href);
+    saveBookmarks();
+    updateSavedToggleLabel();
+  }
+  function bookmarkBtnHtml(href, extraClass){
+    var on = bookmarks.has(href);
+    var icon = on
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
+    return '<button type="button" class="bookmark-btn' + (on ? ' active' : '') + (extraClass ? ' ' + extraClass : '') +
+      '" data-href="' + escapeHtml(href) + '" aria-pressed="' + on + '" aria-label="' +
+      (on ? 'Remove bookmark' : 'Bookmark this story') + '" title="' +
+      (on ? 'Remove bookmark' : 'Bookmark this story') + '">' + icon + '</button>';
+  }
+
+  var tagLabels = {};
+  var tagCounts = {};
+  Object.keys(tagDefs).forEach(function(code){
+    tagLabels[code] = tagDefs[code].label;
+    tagCounts[code] = tagDefs[code].count;
+  });
+
+  var TAG_GROUPS = [
+    { name: 'Relationships', tags: ['mf','ff','mm'] },
+    { name: 'Power Dynamics', tags: ['fd','md','ds','hm','nc'] },
+    { name: 'Kink & Fetish', tags: ['bd','ft','ex','la','ws','sc'] },
+    { name: 'Taboo', tags: ['in','be','ca'] },
+    { name: 'Genre & Setting', tags: ['sf','rb','ts','cb','fu'] },
+    { name: 'Other', tags: ['hu','ma','gr'] }
+  ];
+
+  var chips = {};
+  var taggroups = document.getElementById('taggroups');
+  var groupBadges = {};
+
+  function cycleTagState(code){
+    var chip = chips[code];
+    if (!chip) return;
+    var next = chip.dataset.state === 'none' ? 'include'
+              : chip.dataset.state === 'include' ? 'exclude'
+              : 'none';
+    chip.dataset.state = next;
+    chip.classList.toggle('active', next === 'include');
+    chip.classList.toggle('excluded', next === 'exclude');
+  }
+
+  function buildChip(code){
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'tag-chip';
+    chip.dataset.code = code;
+    chip.dataset.state = 'none';
+    chip.innerHTML = '<span class="label">' + tagLabels[code] + '</span><span class="count">' + (tagCounts[code] || 0) + '</span>';
+    chip.addEventListener('click', function(){
+      cycleTagState(code);
+      updateGroupBadges();
+      render();
+    });
+    chips[code] = chip;
+    return chip;
+  }
+
+  TAG_GROUPS.forEach(function(group, gi){
+    var details = document.createElement('details');
+    details.className = 'tag-group';
+
+    var summary = document.createElement('summary');
+    var badge = document.createElement('span');
+    badge.className = 'group-badge';
+    var right = document.createElement('span');
+    right.className = 'summary-right';
+    right.appendChild(badge);
+    var chevron = document.createElement('span');
+    chevron.className = 'chevron';
+    chevron.textContent = '\u25b8';
+    right.appendChild(chevron);
+
+    summary.textContent = group.name;
+    summary.appendChild(right);
+    details.appendChild(summary);
+
+    var row = document.createElement('div');
+    row.className = 'tag-row';
+    group.tags.forEach(function(code){
+      if (!(code in tagLabels)) return;
+      row.appendChild(buildChip(code));
+    });
+    details.appendChild(row);
+
+    taggroups.appendChild(details);
+    groupBadges[group.name] = { badge: badge, tags: group.tags };
+  });
+
+  var tagCodes = Object.keys(chips);
+
+  function updateGroupBadges(){
+    Object.keys(groupBadges).forEach(function(name){
+      var info = groupBadges[name];
+      var n = info.tags.filter(function(t){ return chips[t] && chips[t].dataset.state !== 'none'; }).length;
+      if (n > 0){
+        info.badge.textContent = n;
+        info.badge.classList.add('show');
+      } else {
+        info.badge.classList.remove('show');
+      }
+    });
+  }
+
+  var searchInput = document.getElementById('search');
+  var modeAnd = document.getElementById('mode-and');
+  var modeOr = document.getElementById('mode-or');
+  var viewStoriesBtn = document.getElementById('view-stories');
+  var viewAuthorsBtn = document.getElementById('view-authors');
+  var clearBtn = document.getElementById('clearall');
+  var resultsEl = document.getElementById('results');
+  var emptyEl = document.getElementById('emptystate');
+  var countEl = document.getElementById('resultcount');
+  var totalEl = document.getElementById('totalcount');
+  var pageTitleEl = document.getElementById('pagetitle');
+  var sentinel = document.getElementById('sentinel');
+  var savedToggle = document.getElementById('saved-toggle');
+  var savedToggleIcon = savedToggle.querySelector('.saved-toggle-icon');
+  var savedToggleLabel = savedToggle.querySelector('.saved-toggle-label');
+
+  var scopeToggle = document.getElementById('scope-toggle');
+  var scopeTitleBtn = document.getElementById('scope-title');
+  var scopeSynopsisBtn = document.getElementById('scope-synopsis');
+  // 'title' = search story titles only (default), 'synopsis' = search synopses only
+  var searchScope = 'title';
+  function updateScopeToggle(){
+    var isSyn = searchScope === 'synopsis';
+    scopeTitleBtn.classList.toggle('active', !isSyn);
+    scopeSynopsisBtn.classList.toggle('active', isSyn);
+    // Author view always searches author names, so the toggle doesn't apply there.
+    scopeToggle.hidden = viewMode === 'authors';
+    if (viewMode !== 'authors') searchInput.placeholder = isSyn ? 'Search synopses…' : 'Search titles…';
+  }
+  function setScope(scope){
+    if (searchScope === scope) return;
+    searchScope = scope;
+    clearTimeout(debounceTimer);
+    render();
+  }
+  scopeTitleBtn.addEventListener('click', function(){ setScope('title'); });
+  scopeSynopsisBtn.addEventListener('click', function(){ setScope('synopsis'); });
+
+  var BOOKMARK_ICON_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
+  var BOOKMARK_ICON_FILLED = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
+
+  // 'none' = no filter, 'include' = saved stories only, 'exclude' = hide saved stories
+  var savedState = 'none';
+  function updateSavedToggleLabel(){
+    var n = bookmarks.size;
+    savedToggle.classList.toggle('active', savedState === 'include');
+    savedToggle.classList.toggle('excluded', savedState === 'exclude');
+    savedToggle.setAttribute('aria-pressed', savedState === 'include');
+    savedToggleIcon.innerHTML = savedState === 'include' ? BOOKMARK_ICON_FILLED : BOOKMARK_ICON_OUTLINE;
+    var label = savedState === 'include' ? 'Saved only' : savedState === 'exclude' ? 'Hide saved' : 'Saved';
+    savedToggleLabel.textContent = label + (n ? ' (' + n + ')' : '');
+  }
+  updateSavedToggleLabel();
+  savedToggle.addEventListener('click', function(){
+    savedState = savedState === 'none' ? 'include' : savedState === 'include' ? 'exclude' : 'none';
+    updateSavedToggleLabel();
+    render();
+  });
+
+  var totalAuthorCount = Object.keys(stories.reduce(function(acc, s){ if (s.author) acc[s.author] = 1; return acc; }, {})).length;
+
+  var viewMode = 'stories';
+
+  function updateTotalText(){
+    if (viewMode === 'authors'){
+      pageTitleEl.textContent = 'Browse every author';
+      totalEl.textContent = totalAuthorCount.toLocaleString() + ' authors. Click one to see everything they\u2019ve written.';
+    } else {
+      pageTitleEl.textContent = 'Browse every story';
+      totalEl.textContent = stories.length.toLocaleString() + ' stories. Last Updated Aug 22, 2026';
+    }
+  }
+  updateTotalText();
+
+  function updateSortLabels(){
+    document.querySelectorAll('.summary-label').forEach(function(el){
+      el.textContent = viewMode === 'authors' ? el.dataset.authorsLabel : el.dataset.storiesLabel;
+    });
+  }
+
+  viewStoriesBtn.addEventListener('click', function(){
+    if (viewMode === 'stories') return;
+    closeAuthorPanel();
+    viewMode = 'stories';
+    viewStoriesBtn.classList.add('active');
+    viewAuthorsBtn.classList.remove('active');
+    searchInput.placeholder = 'Search stories…';
+    clearTimeout(debounceTimer);
+    updateTotalText();
+    updateSortLabels();
+    render();
+  });
+
+  viewAuthorsBtn.addEventListener('click', function(){
+    if (viewMode === 'authors') return;
+    closeAuthorPanel();
+    viewMode = 'authors';
+    viewAuthorsBtn.classList.add('active');
+    viewStoriesBtn.classList.remove('active');
+    searchInput.placeholder = 'Search authors…';
+    clearTimeout(debounceTimer);
+    updateTotalText();
+    updateSortLabels();
+    render();
+  });
+
+  // Jump from a story's "by AuthorName" link straight to that author's
+  // full portfolio in the Authors view, pre-expanded and scrolled into
+  // view. Used by the mini-panel's "View all works" button.
+  function goToAuthor(name){
+    authorPanelExpandedSet.forEach(function(href){ authorStoryExpandedSet.add(href); });
+    closeAuthorPanel();
+    viewMode = 'authors';
+    viewAuthorsBtn.classList.add('active');
+    viewStoriesBtn.classList.remove('active');
+    searchInput.placeholder = 'Search authors…';
+    clearTimeout(debounceTimer);
+    searchInput.value = name;
+    authorExpandedSet.add(name);
+    updateTotalText();
+    updateSortLabels();
+    render();
+    requestAnimationFrame(function(){
+      var rows = resultsEl.querySelectorAll('.author-row');
+      for (var i = 0; i < rows.length; i++){
+        if (rows[i].dataset.author === name){
+          rows[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+          break;
+        }
+      }
+    });
+  }
+
+  // --- Author mini-portfolio side panel ---
+  // Opened from a story's "by AuthorName" link. This is a quick peek: it
+  // does NOT touch the current search, filters, or view mode, so browsing
+  // picks up right where it was left when the panel closes. It stays tied
+  // to whichever story row triggered it and auto-closes the moment that
+  // story is collapsed again (see the row-collapse handling below).
+  var authorPanelEl = document.getElementById('author-panel');
+  var authorPanelBackdrop = document.getElementById('author-panel-backdrop');
+  var authorPanelNameEl = document.getElementById('author-panel-name');
+  var authorPanelMetaEl = document.getElementById('author-panel-meta');
+  var authorPanelListEl = document.getElementById('author-panel-list');
+  var authorPanelCloseBtn = document.getElementById('author-panel-close');
+  var authorPanelTriggerHref = null;
+  var authorPanelName = null;
+  // The sidebar panel gets its own expanded-story tracking, separate from
+  // authorStoryExpandedSet (used by the full Authors view), so opening the
+  // panel always starts collapsed rather than remembering the last session.
+  var authorPanelExpandedSet = new Set();
+
+  // Simple 3-state sort for the panel's own story list: click a field once
+  // for descending, twice for ascending, a third time to clear back to the
+  // default (most-recent-date-added) order. Independent of the main list's
+  // sort/filter state.
+  var authorPanelSort = {field: 'added', dir: 'desc'};
+  var authorPanelSortEl = document.getElementById('author-panel-sort');
+
+  function authorPanelSortValue(s, field){
+    if (field === 'title') return stripArticle(s.title);
+    if (field === 'added') return (s._addedDays === null || s._addedDays === undefined) ? -Infinity : s._addedDays;
+    if (field === 'updated') return (s._updatedDays === null || s._updatedDays === undefined) ? -Infinity : s._updatedDays;
+    if (field === 'words') return ('words' in s) ? s.words : -Infinity;
+  }
+
+  function updateAuthorPanelSortButtons(){
+    authorPanelSortEl.querySelectorAll('.author-sort-btn').forEach(function(btn){
+      var field = btn.dataset.field;
+      var label = btn.textContent.replace(/^[\u2191\u2193]\s*/, '').trim();
+      if (field === authorPanelSort.field){
+        btn.classList.add('active');
+        var arrow = authorPanelSort.dir === 'asc' ? '\u2191' : '\u2193';
+        btn.innerHTML = '<span class="arrow">' + arrow + '</span>' + escapeHtml(label);
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = label;
+      }
+    });
+  }
+
+  authorPanelSortEl.addEventListener('click', function(e){
+    var btn = e.target.closest('.author-sort-btn');
+    if (!btn) return;
+    var field = btn.dataset.field;
+    if (authorPanelSort.field !== field){
+      authorPanelSort = {field: field, dir: 'desc'};
+    } else if (authorPanelSort.dir === 'desc'){
+      authorPanelSort.dir = 'asc';
+    } else {
+      authorPanelSort = {field: null, dir: null};
+    }
+    updateAuthorPanelSortButtons();
+    renderAuthorPanelList();
+  });
+
+  function renderAuthorPanelList(){
+    if (!authorPanelName) return;
+    var authored = stories.filter(function(s){ return s.author === authorPanelName; }).slice().sort(function(a,b){
+      var va = authorPanelSortValue(a, 'added'), vb = authorPanelSortValue(b, 'added');
+      return va < vb ? 1 : (va > vb ? -1 : 0);
+    });
+    if (authorPanelSort.field){
+      var field = authorPanelSort.field, dir = authorPanelSort.dir;
+      authored.sort(function(a,b){
+        var va = authorPanelSortValue(a, field), vb = authorPanelSortValue(b, field);
+        var cmp = va < vb ? -1 : (va > vb ? 1 : 0);
+        return dir === 'asc' ? cmp : -cmp;
+      });
+    }
+    authorPanelListEl.innerHTML = authored.map(function(s){
+      return storyItemHtml(s, authorPanelExpandedSet.has(s.href));
+    }).join('');
+  }
+
+  function openAuthorPanel(name, triggerHref){
+    authorPanelName = name;
+    authorPanelTriggerHref = triggerHref || null;
+    authorPanelExpandedSet = new Set();
+    authorPanelSort = {field: 'added', dir: 'desc'};
+    updateAuthorPanelSortButtons();
+
+    var authored = stories.filter(function(s){ return s.author === name; });
+    var totalWords = authored.reduce(function(sum,s){ return sum + ('words' in s ? s.words : 0); }, 0);
+
+    authorPanelNameEl.textContent = name;
+    authorPanelMetaEl.textContent = authored.length.toLocaleString() + (authored.length === 1 ? ' story' : ' stories') +
+      ' \u00b7 ' + totalWords.toLocaleString() + ' words total';
+    renderAuthorPanelList();
+
+    authorPanelEl.classList.add('open');
+    authorPanelEl.setAttribute('aria-hidden', 'false');
+    authorPanelBackdrop.classList.add('show');
+    document.body.classList.add('author-panel-open');
+    authorPanelEl.scrollTop = 0;
+  }
+
+  function closeAuthorPanel(){
+    if (!authorPanelName) return;
+    authorPanelName = null;
+    authorPanelTriggerHref = null;
+    authorPanelExpandedSet = new Set();
+    authorPanelEl.classList.remove('open');
+    authorPanelEl.setAttribute('aria-hidden', 'true');
+    authorPanelBackdrop.classList.remove('show');
+    document.body.classList.remove('author-panel-open');
+  }
+
+  authorPanelCloseBtn.addEventListener('click', closeAuthorPanel);
+  authorPanelBackdrop.addEventListener('click', closeAuthorPanel);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeAuthorPanel();
+  });
+
+  // Expand a story inside the panel to show its synopsis/tags/chapters.
+  // The panel uses its own authorPanelExpandedSet (reset each time the
+  // panel opens) rather than authorStoryExpandedSet, which belongs to the
+  // full Authors view - see goToAuthor() for how the two are reconciled
+  // when jumping from the panel to the full portfolio.
+  authorPanelListEl.addEventListener('click', function(e){
+    var bookmarkBtn = e.target.closest('.bookmark-btn');
+    if (bookmarkBtn){
+      toggleBookmark(bookmarkBtn.dataset.href);
+      renderAuthorPanelList();
+      return;
+    }
+    var tagBtn = e.target.closest('.tag-chip');
+    if (tagBtn){
+      // The panel's own story pool ignores tag filters entirely (it always
+      // shows everything by this author), so there's nothing to exempt here
+      // - just update the shared tag state and refresh both the panel and
+      // the main page so everything stays in sync, without collapsing.
+      cycleTagState(tagBtn.dataset.code);
+      updateGroupBadges();
+      render();
+      renderAuthorPanelList();
+      return;
+    }
+    if (e.target.closest('a.chapter-link') || e.target.closest('.author-stories') || e.target.closest('.read-story-btn')) return;
+    var item = e.target.closest('.author-story-item');
+    if (!item) return;
+    var href = item.dataset.href;
+    if (authorPanelExpandedSet.has(href)) authorPanelExpandedSet.delete(href);
+    else authorPanelExpandedSet.add(href);
+    renderAuthorPanelList();
+  });
+
+  authorPanelListEl.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var item = e.target.closest('.author-story-item:not(.chapter-link)');
+    if (!item || e.target !== item) return;
+    e.preventDefault();
+    var href = item.dataset.href;
+    if (authorPanelExpandedSet.has(href)) authorPanelExpandedSet.delete(href);
+    else authorPanelExpandedSet.add(href);
+    renderAuthorPanelList();
+  });
+
+  var matchMode = 'and';
+  modeAnd.addEventListener('click', function(){ matchMode='and'; modeAnd.classList.add('active'); modeOr.classList.remove('active'); render(); });
+  modeOr.addEventListener('click', function(){ matchMode='or'; modeOr.classList.add('active'); modeAnd.classList.remove('active'); render(); });
+
+  var sortField = 'added';
+  var sortDir = 'desc';
+
+  var sortDirLabels = { desc: '↓ High → Low', asc: '↑ Low → High' };
+
+  function updateSortUI(){
+    document.querySelectorAll('.dir-toggle').forEach(function(toggle){
+      var field = toggle.dataset.field;
+      toggle.querySelectorAll('button').forEach(function(btn){
+        btn.classList.toggle('active', field === sortField && btn.dataset.dir === sortDir);
+      });
+    });
+    document.querySelectorAll('.sort-badge').forEach(function(badge){
+      var isActive = badge.dataset.field === sortField;
+      badge.classList.toggle('show', isActive);
+      if (isActive) badge.textContent = sortDirLabels[sortDir];
+    });
+  }
+
+  document.querySelectorAll('.dir-toggle').forEach(function(toggle){
+    var field = toggle.dataset.field;
+    toggle.querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        sortField = field;
+        sortDir = btn.dataset.dir;
+        updateSortUI();
+        render();
+      });
+    });
+  });
+
+  updateSortUI();
+
+  function activeTags(){
+    return tagCodes.filter(function(c){ return chips[c].dataset.state === 'include'; });
+  }
+
+  function excludedTags(){
+    return tagCodes.filter(function(c){ return chips[c].dataset.state === 'exclude'; });
+  }
+
+  function stripArticle(t){
+    var low = t.toLowerCase();
+    if (low.indexOf('the ') === 0) return low.slice(4);
+    if (low.indexOf('an ') === 0) return low.slice(3);
+    if (low.indexOf('a ') === 0) return low.slice(2);
+    return low;
+  }
+
+  function toDays(iso){
+    if (!iso) return null;
+    var t = Date.parse(iso + 'T00:00:00Z');
+    if (isNaN(t)) return null;
+    return Math.floor(t / 86400000);
+  }
+
+  function fmtDate(iso){
+    if (!iso) return null;
+    var parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var y = parts[0], m = parseInt(parts[1],10)-1, d = parseInt(parts[2],10);
+    return d + ' ' + months[m] + ' ' + y;
+  }
+
+  function fmtDays(days){
+    var d = new Date(days * 86400000);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getUTCDate() + ' ' + months[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+  }
+
+  stories.forEach(function(s){
+    s._addedDays = toDays(s.date_added);
+    s._updatedDays = toDays(s.date_updated);
+  });
+
+  function buildSlider(containerId, minVal, maxVal, formatFn, labelMinEl, labelMaxEl, onChange){
+    var container = document.getElementById(containerId);
+    var thumbMin = container.querySelector('.thumb-min');
+    var thumbMax = container.querySelector('.thumb-max');
+    var fill = container.querySelector('.track-fill');
+
+    thumbMin.min = minVal; thumbMin.max = maxVal; thumbMin.value = minVal; thumbMin.step = 1;
+    thumbMax.min = minVal; thumbMax.max = maxVal; thumbMax.value = maxVal; thumbMax.step = 1;
+
+    function update(){
+      var lo = parseInt(thumbMin.value, 10);
+      var hi = parseInt(thumbMax.value, 10);
+      if (lo > hi){
+        var tmp = lo; lo = hi; hi = tmp;
+      }
+      var range = maxVal - minVal || 1;
+      var pctLo = (lo - minVal) / range * 100;
+      var pctHi = (hi - minVal) / range * 100;
+      fill.style.left = pctLo + '%';
+      fill.style.width = (pctHi - pctLo) + '%';
+      labelMinEl.textContent = formatFn(lo);
+      labelMaxEl.textContent = formatFn(hi);
+      return {lo: lo, hi: hi};
+    }
+
+    var state = update();
+
+    function handleInput(){
+      state = update();
+      onChange(state.lo, state.hi, state.lo === minVal && state.hi === maxVal);
+    }
+
+    thumbMin.addEventListener('input', handleInput);
+    thumbMax.addEventListener('input', handleInput);
+
+    return {
+      reset: function(){ thumbMin.value = minVal; thumbMax.value = maxVal; state = update(); },
+      isFull: function(){ return state.lo === minVal && state.hi === maxVal; },
+      getState: function(){ return state; }
+    };
+  }
+
+  var wordVals = stories.filter(function(s){ return 'words' in s; }).map(function(s){ return s.words; });
+  var wMin = wordVals.length ? Math.min.apply(null, wordVals) : 0;
+  var wMax = wordVals.length ? Math.max.apply(null, wordVals) : 0;
+
+  var addedVals = stories.filter(function(s){ return s._addedDays !== null; }).map(function(s){ return s._addedDays; });
+  var aMin = addedVals.length ? Math.min.apply(null, addedVals) : 0;
+  var aMax = addedVals.length ? Math.max.apply(null, addedVals) : 0;
+
+  var updatedVals = stories.filter(function(s){ return s._updatedDays !== null; }).map(function(s){ return s._updatedDays; });
+  var uMin = updatedVals.length ? Math.min.apply(null, updatedVals) : 0;
+  var uMax = updatedVals.length ? Math.max.apply(null, updatedVals) : 0;
+
+  var wordFilter = {lo: wMin, hi: wMax, active: false};
+  var addedFilter = {lo: aMin, hi: aMax, active: false};
+  var updatedFilter = {lo: uMin, hi: uMax, active: false};
+
+  var wordsSlider = buildSlider('slider-words', wMin, wMax,
+    function(v){ return v.toLocaleString() + ' words'; },
+    document.getElementById('words-min-label'), document.getElementById('words-max-label'),
+    function(lo, hi, isFull){ wordFilter = {lo: lo, hi: hi, active: !isFull}; debounceRender(); });
+
+  var addedSlider = buildSlider('slider-added', aMin, aMax,
+    fmtDays,
+    document.getElementById('added-min-label'), document.getElementById('added-max-label'),
+    function(lo, hi, isFull){ addedFilter = {lo: lo, hi: hi, active: !isFull}; debounceRender(); });
+
+  var updatedSlider = buildSlider('slider-updated', uMin, uMax,
+    fmtDays,
+    document.getElementById('updated-min-label'), document.getElementById('updated-max-label'),
+    function(lo, hi, isFull){ updatedFilter = {lo: lo, hi: hi, active: !isFull}; debounceRender(); });
+
+  var sliderDebounce;
+  function debounceRender(){
+    clearTimeout(sliderDebounce);
+    sliderDebounce = setTimeout(render, 60);
+  }
+
+  var pageSize = 150;
+  var shown = pageSize;
+  var io = new IntersectionObserver(function(entries){
+    if (entries[0].isIntersecting){
+      shown += pageSize;
+      if (viewMode === 'authors'){
+        renderAuthorList(currentAuthorList);
+      } else {
+        renderList(currentFiltered);
+      }
+    }
+  });
+  io.observe(sentinel);
+
+  var currentFiltered = stories;
+  var currentAuthorList = [];
+
+  function applyFilters(){
+    var q = searchInput.value.trim().toLowerCase();
+    var active = activeTags();
+    var excluded = excludedTags();
+
+    return stories.filter(function(s){
+      if (savedState === 'include' && !bookmarks.has(s.href)) return false;
+      if (savedState === 'exclude' && bookmarks.has(s.href)) return false;
+
+      if (q){
+        if (viewMode === 'authors'){
+          var inAuthor = s.author && s.author.toLowerCase().indexOf(q) !== -1;
+          if (!inAuthor) return false;
+        } else {
+          var haystack = searchScope === 'synopsis' ? (s.synopsis || '') : s.title;
+          if (haystack.toLowerCase().indexOf(q) === -1) return false;
+        }
+      }
+
+      if (active.length > 0){
+        var tagMatch = matchMode === 'and'
+          ? active.every(function(t){ return s.tags.indexOf(t) !== -1; })
+          : active.some(function(t){ return s.tags.indexOf(t) !== -1; });
+        if (!tagMatch) return false;
+      }
+
+      if (excluded.length > 0 && !exemptFromExclusion.has(s.href)){
+        var hasExcluded = excluded.some(function(t){ return s.tags.indexOf(t) !== -1; });
+        if (hasExcluded) return false;
+      }
+
+      if (wordFilter.active){
+        if (!('words' in s) || s.words < wordFilter.lo || s.words > wordFilter.hi) return false;
+      }
+      if (addedFilter.active){
+        if (s._addedDays === null || s._addedDays < addedFilter.lo || s._addedDays > addedFilter.hi) return false;
+      }
+      if (updatedFilter.active){
+        if (s._updatedDays === null || s._updatedDays < updatedFilter.lo || s._updatedDays > updatedFilter.hi) return false;
+      }
+
+      return true;
+    });
+  }
+
+  function sortStoriesList(list){
+    var field = sortField;
+    return list.slice().sort(function(a,b){
+      var cmp;
+      if (field === 'title'){
+        var ka = stripArticle(a.title), kb = stripArticle(b.title);
+        cmp = ka < kb ? -1 : (ka > kb ? 1 : 0);
+      } else if (field === 'added'){
+        var da = (a._addedDays === null) ? -Infinity : a._addedDays;
+        var db = (b._addedDays === null) ? -Infinity : b._addedDays;
+        cmp = da - db;
+      } else if (field === 'updated'){
+        var ua = (a._updatedDays === null) ? -Infinity : a._updatedDays;
+        var ub = (b._updatedDays === null) ? -Infinity : b._updatedDays;
+        cmp = ua - ub;
+      } else if (field === 'words'){
+        var wa = ('words' in a) ? a.words : -Infinity;
+        var wb = ('words' in b) ? b.words : -Infinity;
+        cmp = wa - wb;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+  }
+
+  function filterStories(){
+    return sortStoriesList(applyFilters());
+  }
+
+  function buildAuthorList(storyPool){
+    var map = {};
+    storyPool.forEach(function(s){
+      if (!s.author) return;
+      if (!map[s.author]) map[s.author] = [];
+      map[s.author].push(s);
+    });
+    return Object.keys(map).map(function(name){
+      var arr = map[name].slice().sort(function(a,b){
+        var da = (a._addedDays === null) ? -Infinity : a._addedDays;
+        var db = (b._addedDays === null) ? -Infinity : b._addedDays;
+        return db - da;
+      });
+      var totalWords = arr.reduce(function(sum,s){ return sum + ('words' in s ? s.words : 0); }, 0);
+      var latestAdded = arr.reduce(function(m,s){ return (s._addedDays !== null && (m === null || s._addedDays > m)) ? s._addedDays : m; }, null);
+      var latestUpdated = arr.reduce(function(m,s){ return (s._updatedDays !== null && (m === null || s._updatedDays > m)) ? s._updatedDays : m; }, null);
+      return { name: name, stories: arr, totalWords: totalWords, latestAdded: latestAdded, latestUpdated: latestUpdated, count: arr.length };
+    });
+  }
+
+  function sortAuthorList(list){
+    var field = sortField;
+    return list.slice().sort(function(a,b){
+      var cmp;
+      if (field === 'title'){
+        var ka = a.name.toLowerCase(), kb = b.name.toLowerCase();
+        cmp = ka < kb ? -1 : (ka > kb ? 1 : 0);
+      } else if (field === 'added'){
+        var da = (a.latestAdded === null) ? -Infinity : a.latestAdded;
+        var db = (b.latestAdded === null) ? -Infinity : b.latestAdded;
+        cmp = da - db;
+      } else if (field === 'updated'){
+        var ua = (a.latestUpdated === null) ? -Infinity : a.latestUpdated;
+        var ub = (b.latestUpdated === null) ? -Infinity : b.latestUpdated;
+        cmp = ua - ub;
+      } else if (field === 'words'){
+        cmp = a.totalWords - b.totalWords;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+  }
+
+  function truncate(str, n){
+    if (str.length <= n) return str;
+    var cut = str.slice(0, n);
+    var lastSpace = cut.lastIndexOf(' ');
+    return cut.slice(0, lastSpace > 0 ? lastSpace : n) + '\u2026';
+  }
+
+  var expandedSet = new Set();
+  var authorExpandedSet = new Set();
+  var authorStoryExpandedSet = new Set();
+  // Per-author sort state for the sort buttons inside each expanded author
+  // section on the main Authors view - independent of the side panel's own
+  // authorPanelSort, and independent per author so expanding several authors
+  // at once keeps their own sort choices.
+  var authorRowSort = {};
+
+  function authorRowSortButtonsHtml(name){
+    var sort = authorRowSort[name] || {field: 'added', dir: 'desc'};
+    var fields = [
+      {field: 'title', label: 'Title'},
+      {field: 'added', label: 'Date Added'},
+      {field: 'updated', label: 'Updated'},
+      {field: 'words', label: 'Word Count'}
+    ];
+    var btns = fields.map(function(f){
+      if (f.field === sort.field){
+        var arrow = sort.dir === 'asc' ? '\u2191' : '\u2193';
+        return '<button type="button" class="author-sort-btn active" data-field="' + f.field + '"><span class="arrow">' + arrow + '</span>' + escapeHtml(f.label) + '</button>';
+      }
+      return '<button type="button" class="author-sort-btn" data-field="' + f.field + '">' + escapeHtml(f.label) + '</button>';
+    }).join('');
+    return '<div class="author-panel-sort author-row-sort" data-author="' + escapeHtml(name) + '">' + btns + '</div>';
+  }
+  // Stories currently exempt from tag-exclusion filtering: when a user
+  // excludes a tag from within a story's own expanded tag list, that story
+  // would otherwise vanish out from under them mid-click. Exempting it here
+  // keeps it visible until they deliberately collapse the entry, at which
+  // point the exclusion takes effect normally.
+  var exemptFromExclusion = new Set();
+
+  function tagButtonHtml(code){
+    var label = tagLabels[code] || code;
+    var chip = chips[code];
+    var state = chip ? chip.dataset.state : 'none';
+    var cls = 'tag-chip' + (state === 'include' ? ' active' : state === 'exclude' ? ' excluded' : '');
+    return '<button type="button" class="' + cls + '" data-code="' + code + '">' + escapeHtml(label) + '</button>';
+  }
+
+  function renderList(list){
+    var slice = list.slice(0, shown);
+    resultsEl.innerHTML = slice.map(function(s){
+      var metaHtml, synopsisHtml = '';
+      var isExpanded = expandedSet.has(s.href);
+
+      if ('words' in s){
+        var bits = [];
+        if (s.author) bits.push('by <button type="button" class="author-link" data-author="' + escapeHtml(s.author) + '">' + escapeHtml(s.author) + '</button>');
+        var added = fmtDate(s.date_added);
+        var updated = fmtDate(s.date_updated);
+        if (updated) bits.push('Updated ' + updated);
+        else if (added) bits.push('Added ' + added);
+        var chapCount = s.chapters ? s.chapters.length : 0;
+        bits.push(chapCount + (chapCount === 1 ? ' chapter' : ' chapters'));
+        bits.push(s.words.toLocaleString() + ' words');
+        metaHtml = bits.join('<span class="sep">\u00b7</span>');
+        if (s.synopsis){
+          var text = isExpanded ? s.synopsis : truncate(s.synopsis, 220);
+          synopsisHtml = '<p class="synopsis">' + escapeHtml(text) + '</p>';
+        }
+      } else {
+        metaHtml = '<span class="pending">details not yet available</span>';
+      }
+
+      if (isExpanded){
+        if (s.tags && s.tags.length){
+          synopsisHtml += '<div class="expanded-tags">' + s.tags.map(tagButtonHtml).join('') + '</div>';
+        }
+        synopsisHtml += '<a class="read-story-btn" href="' + storyUrl(s.href) + '" target="_blank" rel="noopener noreferrer">Read story \u2192</a>';
+        if (s.chapters && s.chapters.length){
+          synopsisHtml += '<div class="author-stories">' + s.chapters.map(function(ch){
+            return '<a class="author-story-item chapter-link" href="' + storyUrl(ch.href) + '" target="_blank" rel="noopener noreferrer">' +
+              '<div class="story-item-top">' +
+                '<span class="story-item-name">' + escapeHtml(ch.name) + '</span>' +
+                '<span class="meta-mini">' + ch.words.toLocaleString() + ' words</span>' +
+              '</div>' +
+            '</a>';
+          }).join('') + '</div>';
+        }
+      }
+
+      var indicator = s.synopsis ? (isExpanded ? '\u25b4 less' : '\u25be more') : '';
+      var titleHtml = '<span class="name">' + escapeHtml(s.title) + '</span>';
+
+      return '<div class="row' + (isExpanded ? ' expanded' : '') + '" data-href="' + escapeHtml(s.href) + '" tabindex="0" role="button" aria-expanded="' + isExpanded + '">' +
+        bookmarkBtnHtml(s.href) +
+        '<div class="row-top">' +
+          titleHtml +
+          '<span class="dash">\u2014</span>' +
+          '<span class="meta">' + metaHtml + (indicator ? ' <span class="expand-indicator">' + indicator + '</span>' : '') + '</span>' +
+        '</div>' +
+        synopsisHtml +
+      '</div>';
+    }).join('');
+    emptyEl.hidden = list.length !== 0;
+    countEl.textContent = list.length.toLocaleString() + ' result' + (list.length===1?'':'s') +
+      (shown < list.length ? ' \u00b7 showing first ' + Math.min(shown, list.length).toLocaleString() : '');
+  }
+
+  // Renders one expandable story entry used both in the full Authors view
+  // and the author mini-panel, so expanding a story shows the same
+  // synopsis, tags, and chapter list in either place.
+  function storyItemHtml(s, isItemExpanded){
+    // Line 1: date added · date updated. Line 2: chapter count · word count. Each line
+    // is its own block with no-wrap pieces so "1 chapter" never splits.
+    var addedStr = fmtDate(s.date_added);
+    var chapCount = s.chapters ? s.chapters.length : 0;
+    var line2Bits = [chapCount + (chapCount === 1 ? ' chapter' : ' chapters')];
+    if ('words' in s) line2Bits.push(s.words.toLocaleString() + ' words');
+    var metaHtml = '';
+    var updatedStr = fmtDate(s.date_updated);
+    var line1Bits = [];
+    if (addedStr) line1Bits.push('Added ' + addedStr);
+    if (updatedStr) line1Bits.push('Updated ' + updatedStr);
+    if (line1Bits.length){
+      metaHtml += '<span class="meta-line">' +
+        line1Bits.map(function(b){ return '<span class="nowrap">' + b + '</span>'; })
+                 .join('<span class="vsep" aria-hidden="true"></span>') +
+        '</span>';
+    }
+    metaHtml += '<span class="meta-line">' +
+      line2Bits.map(function(b){ return '<span class="nowrap">' + b + '</span>'; })
+               .join('<span class="vsep" aria-hidden="true"></span>') +
+      '</span>';
+    var extra = '';
+    if (isItemExpanded){
+      var synHtml = s.synopsis ? '<p class="synopsis">' + escapeHtml(s.synopsis) + '</p>' : '';
+      var tagsHtml = (s.tags && s.tags.length)
+        ? '<div class="expanded-tags">' + s.tags.map(tagButtonHtml).join('') + '</div>'
+        : '';
+      var chaptersHtml = '';
+      if (s.chapters && s.chapters.length){
+        chaptersHtml = '<div class="author-stories">' + s.chapters.map(function(ch){
+          return '<a class="author-story-item chapter-link" href="' + storyUrl(ch.href) + '" target="_blank" rel="noopener noreferrer">' +
+            '<div class="story-item-top">' +
+              '<span class="story-item-name">' + escapeHtml(ch.name) + '</span>' +
+              '<span class="meta-mini">' + ch.words.toLocaleString() + ' words</span>' +
+            '</div>' +
+          '</a>';
+        }).join('') + '</div>';
+      }
+      extra = synHtml + tagsHtml + '<a class="read-story-btn" href="' + storyUrl(s.href) + '" target="_blank" rel="noopener noreferrer">Read story \u2192</a>' + chaptersHtml;
+    }
+    var headHtml = '<div class="row-top">' +
+      '<span class="name">' + escapeHtml(s.title) + '</span>' +
+      '<span class="dash">\u2014</span>' +
+      '<span class="meta">' + metaHtml + '</span>' +
+    '</div>';
+    return '<div class="author-story-item' + (isItemExpanded ? ' expanded' : '') + '" data-href="' + escapeHtml(s.href) + '" tabindex="0" role="button" aria-expanded="' + isItemExpanded + '">' +
+      bookmarkBtnHtml(s.href, 'small') +
+      headHtml +
+      extra +
+    '</div>';
+  }
+
+  function renderAuthorList(list){
+    var slice = list.slice(0, shown);
+
+    // Re-rendering replaces .author-stories (an internally-scrolling list),
+    // which would otherwise reset its scroll position to the top. Capture
+    // and restore it so expanding/collapsing a story doesn't lose your place.
+    var scrollPositions = {};
+    resultsEl.querySelectorAll('.author-row').forEach(function(row){
+      var inner = row.querySelector('.author-stories');
+      if (inner) scrollPositions[row.dataset.author] = inner.scrollTop;
+    });
+
+    resultsEl.innerHTML = slice.map(function(entry){
+      var isExpanded = authorExpandedSet.has(entry.name);
+
+      var bits = [];
+      bits.push(entry.count + (entry.count === 1 ? ' story' : ' stories'));
+      bits.push(entry.totalWords.toLocaleString() + ' words total');
+      if (entry.latestAdded !== null) bits.push('Latest ' + fmtDays(entry.latestAdded));
+      var metaHtml = bits.join('<span class="sep">\u00b7</span>');
+
+      var indicator = isExpanded ? '\u25b4 hide stories' : '\u25be show stories';
+
+      var storiesHtml = '';
+      if (isExpanded){
+        var rowSort = authorRowSort[entry.name];
+        var rowStories = entry.stories;
+        if (rowSort && rowSort.field){
+          rowStories = rowStories.slice().sort(function(a,b){
+            var va = authorPanelSortValue(a, rowSort.field), vb = authorPanelSortValue(b, rowSort.field);
+            var cmp = va < vb ? -1 : (va > vb ? 1 : 0);
+            return rowSort.dir === 'asc' ? cmp : -cmp;
+          });
+        }
+        storiesHtml = '<div class="author-stories">' + authorRowSortButtonsHtml(entry.name) +
+          rowStories.map(function(s){
+            return storyItemHtml(s, authorStoryExpandedSet.has(s.href));
+          }).join('') + '</div>';
+      }
+
+      return '<div class="row author-row' + (isExpanded ? ' expanded' : '') + '" data-author="' + escapeHtml(entry.name) + '" tabindex="0" role="button" aria-expanded="' + isExpanded + '">' +
+        '<div class="row-top">' +
+          '<span class="name">' + escapeHtml(entry.name) + '</span>' +
+          '<span class="dash">\u2014</span>' +
+          '<span class="meta">' + metaHtml + ' <span class="expand-indicator">' + indicator + '</span></span>' +
+        '</div>' +
+        storiesHtml +
+      '</div>';
+    }).join('');
+
+    resultsEl.querySelectorAll('.author-row').forEach(function(row){
+      var pos = scrollPositions[row.dataset.author];
+      if (pos){
+        var inner = row.querySelector('.author-stories');
+        if (inner) inner.scrollTop = pos;
+      }
+    });
+
+    emptyEl.hidden = list.length !== 0;
+    countEl.textContent = list.length.toLocaleString() + ' author' + (list.length===1?'':'s') +
+      (shown < list.length ? ' \u00b7 showing first ' + Math.min(shown, list.length).toLocaleString() : '');
+  }
+
+  resultsEl.addEventListener('click', function(e){
+    var authorLink = e.target.closest('.author-link');
+    if (authorLink){
+      e.stopPropagation();
+      var linkRow = authorLink.closest('.row');
+      openAuthorPanel(authorLink.dataset.author, linkRow ? linkRow.dataset.href : null);
+      return;
+    }
+
+    var bookmarkBtn = e.target.closest('.bookmark-btn');
+    if (bookmarkBtn){
+      toggleBookmark(bookmarkBtn.dataset.href);
+      render();
+      return;
+    }
+
+    if (viewMode === 'authors'){
+      var authorRow = e.target.closest('.author-row');
+      if (!authorRow) return;
+
+      var rowSortBtn = e.target.closest('.author-row-sort .author-sort-btn');
+      if (rowSortBtn){
+        e.stopPropagation();
+        var rowSortName = authorRow.dataset.author;
+        var field = rowSortBtn.dataset.field;
+        var current = authorRowSort[rowSortName] || {field: 'added', dir: 'desc'};
+        if (current.field !== field){
+          authorRowSort[rowSortName] = {field: field, dir: 'desc'};
+        } else if (current.dir === 'desc'){
+          authorRowSort[rowSortName] = {field: field, dir: 'asc'};
+        } else {
+          delete authorRowSort[rowSortName];
+        }
+        renderAuthorList(currentAuthorList);
+        return;
+      }
+
+      var tagBtn2 = e.target.closest('.tag-chip');
+      if (tagBtn2){
+        var ownerItem2 = tagBtn2.closest('.author-story-item[data-href]');
+        cycleTagState(tagBtn2.dataset.code);
+        updateGroupBadges();
+        // Same exploratory exemption as the main list: don't let a story
+        // vanish out of its author's list mid-click just because you
+        // excluded one of its own tags.
+        if (ownerItem2) exemptFromExclusion.add(ownerItem2.dataset.href);
+        render();
+        return;
+      }
+
+      var storyItem = e.target.closest('.author-story-item:not(.chapter-link)');
+      if (storyItem){
+        if (e.target.closest('a.chapter-link') || e.target.closest('.read-story-btn')) return; // let chapter links navigate
+        var storyHref = storyItem.dataset.href;
+        if (authorStoryExpandedSet.has(storyHref)){
+          authorStoryExpandedSet.delete(storyHref);
+          if (exemptFromExclusion.has(storyHref)){
+            exemptFromExclusion.delete(storyHref);
+            render();
+            return;
+          }
+        } else {
+          authorStoryExpandedSet.add(storyHref);
+        }
+        renderAuthorList(currentAuthorList);
+        return;
+      }
+
+      if (e.target.closest('.author-stories')){
+        return; // clicked empty space in the scroll area, not on an item - ignore so scrolling never closes anything
+      }
+      var name = authorRow.dataset.author;
+      if (authorExpandedSet.has(name)) authorExpandedSet.delete(name);
+      else authorExpandedSet.add(name);
+      renderAuthorList(currentAuthorList);
+      return;
+    }
+
+    var tagBtn = e.target.closest('.tag-chip');
+    if (tagBtn){
+      var ownerRow = tagBtn.closest('.row[data-href]');
+      cycleTagState(tagBtn.dataset.code);
+      updateGroupBadges();
+      // Clicking a tag from within a story's own expanded tag list is
+      // exploratory - keep that story visible even if the tag is now
+      // excluded, so it doesn't disappear mid-click. It'll be re-filtered
+      // normally once the user collapses it.
+      if (ownerRow) exemptFromExclusion.add(ownerRow.dataset.href);
+      render();
+      return;
+    }
+    if (e.target.closest('.author-stories') || e.target.closest('.read-story-btn')) return;
+    var row = e.target.closest('.row');
+    if (!row) return;
+    var href = row.dataset.href;
+    if (expandedSet.has(href)){
+      expandedSet.delete(href);
+      if (href === authorPanelTriggerHref) closeAuthorPanel();
+      if (exemptFromExclusion.has(href)){
+        // Collapsing re-exposes it to the tag-exclusion filter, so a story
+        // excluded while expanded now drops out of the list as expected.
+        exemptFromExclusion.delete(href);
+        render();
+        return;
+      }
+    } else {
+      expandedSet.add(href);
+    }
+    renderList(currentFiltered);
+  });
+
+  resultsEl.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+
+    if (viewMode === 'authors'){
+      var storyItem = e.target.closest('.author-story-item:not(.chapter-link)');
+      if (storyItem && e.target === storyItem){
+        e.preventDefault();
+        var storyHref = storyItem.dataset.href;
+        if (authorStoryExpandedSet.has(storyHref)) authorStoryExpandedSet.delete(storyHref);
+        else authorStoryExpandedSet.add(storyHref);
+        renderAuthorList(currentAuthorList);
+        return;
+      }
+      var authorRow = e.target.closest('.author-row');
+      if (!authorRow || e.target !== authorRow) return;
+      e.preventDefault();
+      var name = authorRow.dataset.author;
+      if (authorExpandedSet.has(name)) authorExpandedSet.delete(name);
+      else authorExpandedSet.add(name);
+      renderAuthorList(currentAuthorList);
+      return;
+    }
+
+    var row = e.target.closest('.row');
+    if (!row || e.target !== row) return;
+    e.preventDefault();
+    var href = row.dataset.href;
+    if (expandedSet.has(href)){
+      expandedSet.delete(href);
+      if (href === authorPanelTriggerHref) closeAuthorPanel();
+    } else {
+      expandedSet.add(href);
+    }
+    renderList(currentFiltered);
+  });
+
+  function escapeHtml(str){
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function render(){
+    shown = pageSize;
+    updateScopeToggle();
+    if (viewMode === 'authors'){
+      var pool = applyFilters();
+      currentAuthorList = sortAuthorList(buildAuthorList(pool));
+      renderAuthorList(currentAuthorList);
+    } else {
+      currentFiltered = filterStories();
+      renderList(currentFiltered);
+    }
+    var active = activeTags();
+    var excluded = excludedTags();
+    var rangesActive = wordFilter.active || addedFilter.active || updatedFilter.active;
+    clearBtn.hidden = active.length === 0 && excluded.length === 0 && !searchInput.value.trim() && !rangesActive;
+  }
+
+  var debounceTimer;
+  searchInput.addEventListener('input', function(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(render, 120);
+  });
+
+  clearBtn.addEventListener('click', function(){
+    searchInput.value = '';
+    tagCodes.forEach(function(c){
+      chips[c].dataset.state = 'none';
+      chips[c].classList.remove('active', 'excluded');
+    });
+    exemptFromExclusion.clear();
+    updateGroupBadges();
+    wordsSlider.reset(); wordFilter = {lo: wMin, hi: wMax, active: false};
+    addedSlider.reset(); addedFilter = {lo: aMin, hi: aMax, active: false};
+    updatedSlider.reset(); updatedFilter = {lo: uMin, hi: uMax, active: false};
+    render();
+  });
+
+  render();
+  } // end init()
+})();
+</script>
+</body>
+</html>
