@@ -883,7 +883,10 @@
       <div class="controls-main">
         <div class="search-row">
           <input type="text" id="search" placeholder="Search titles…" autocomplete="off"/>
-          <button type="button" id="saved-toggle" class="saved-toggle" aria-pressed="false"><span class="saved-toggle-icon"></span><span class="saved-toggle-label">Saved</span></button>
+          <div class="mode-toggle scope-toggle" id="scope-toggle" role="group" aria-label="Search in">
+            <button type="button" id="scope-title" class="active">Title</button>
+            <button type="button" id="scope-synopsis">Synopsis</button>
+          </div>
           <div class="mode-toggle" role="group" aria-label="Browse by">
             <button type="button" id="view-stories" class="active">Stories</button>
             <button type="button" id="view-authors">Authors</button>
@@ -895,10 +898,7 @@
         <span id="resultcount"></span>
         <div class="status-row-right">
           <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
-          <div class="mode-toggle scope-toggle" id="scope-toggle" role="group" aria-label="Search in">
-            <button type="button" id="scope-title" class="active">Title</button>
-            <button type="button" id="scope-synopsis">Synopsis</button>
-          </div>
+          <button type="button" id="saved-toggle" class="saved-toggle" aria-pressed="false"><span class="saved-toggle-icon"></span><span class="saved-toggle-label">Saved</span></button>
         </div>
       </div>
 
