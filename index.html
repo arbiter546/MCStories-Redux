@@ -543,7 +543,24 @@
      Each button is given the same fixed width those two buttons end up with
      (their labels are the same length), so Title/Synopsis match instead of
      sizing to their own text. */
-  .scope-toggle[hidden]{ display:none; }
+  /* Slides open/closed when switching between Stories and Authors. The
+     width animates (and the search bar flexes to fill the space); the
+     negative margin cancels the row gap so no empty gap is left behind. */
+  .scope-toggle{
+    max-width:calc(9.35rem + 2px);
+    opacity:1;
+    transition:max-width .3s ease, opacity .2s ease, margin-left .3s ease, border-width .3s ease;
+  }
+  .scope-toggle.collapsed{
+    max-width:0;
+    opacity:0;
+    margin-left:-.75rem;
+    border-width:0;
+    pointer-events:none;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .scope-toggle{ transition:none; }
+  }
   .scope-toggle button{ width:4.675rem; padding-left:0; padding-right:0; }
 
   /* --- Results --- */
@@ -1191,7 +1208,11 @@
     scopeTitleBtn.classList.toggle('active', !isSyn);
     scopeSynopsisBtn.classList.toggle('active', isSyn);
     // Author view always searches author names, so the toggle doesn't apply there.
-    scopeToggle.hidden = viewMode === 'authors';
+    var collapse = viewMode === 'authors';
+    scopeToggle.classList.toggle('collapsed', collapse);
+    // Keep the collapsed buttons out of tab order / screen readers.
+    if (collapse) scopeToggle.setAttribute('inert', ''); else scopeToggle.removeAttribute('inert');
+    scopeToggle.setAttribute('aria-hidden', collapse);
     if (viewMode !== 'authors') searchInput.placeholder = isSyn ? 'Search synopses…' : 'Search titles…';
   }
   function setScope(scope){
