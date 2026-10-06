@@ -273,7 +273,7 @@
   }
   /* Reuses the .author-story-item styling from the full Authors view so an
      item expands in place to show its synopsis, tags, and chapters. */
-  .author-panel-list .author-story-item{ padding-right:2.1rem; }
+  .author-panel-list .author-story-item{ padding-right:2.9rem; }
 
   #author-panel-backdrop{
     position:fixed;
@@ -670,23 +670,25 @@
   .bookmark-btn:active{ transform:translateY(1px); }
   .bookmark-btn.active{ background:var(--brass); border-color:var(--brass); color:var(--ink); }
   .bookmark-btn.active:hover{ background:var(--brass-bright); border-color:var(--brass-bright); }
-  /* .small variant sits in a borderless, scrollable list (author-story-item),
-     so it stays a plain icon rather than a hanging tag — a tab has no edge
-     to hang from there, and would get clipped by the scroll area. */
+  /* .small variant lives in the author lists (author page + sidebar). Those
+     are scrollable, borderless rows, so the tab hangs from the item's own top
+     edge (top:0, not negative) to avoid being clipped by the scroll area.
+     Same ribbon look as the main list, just a little smaller. */
   .bookmark-btn.small{
-    top:.3rem; right:.15rem;
-    width:22px; height:22px;
-    background:none;
-    border:none;
-    box-shadow:none;
-    border-radius:50%;
-    padding:0;
-    align-items:center;
+    top:0; right:.5rem;
+    width:28px; height:38px;
+    background:var(--ink-4);
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    box-shadow:0 3px 6px rgba(0,0,0,.4);
+    padding:0 0 .45rem;
+    align-items:flex-end;
   }
-  .bookmark-btn.small svg{ width:13px; height:13px; }
-  .bookmark-btn.small:hover{ background:var(--ink); color:var(--brass-bright); }
-  .bookmark-btn.small.active{ background:none; color:var(--brass-bright); }
-  .bookmark-btn.small.active:hover{ background:var(--ink); }
+  .bookmark-btn.small svg{ width:16px; height:16px; }
+  .bookmark-btn.small:hover{ color:var(--brass-bright); border-color:var(--brass); }
+  .bookmark-btn.small.active{ background:var(--brass); border-color:var(--brass); color:var(--ink); }
+  .bookmark-btn.small.active:hover{ background:var(--brass-bright); border-color:var(--brass-bright); }
 
   .saved-toggle{
     font-family:'IBM Plex Mono', monospace;
@@ -848,7 +850,7 @@
   .author-story-item{
     display:block;
     position:relative;
-    padding:.4rem 1.9rem .4rem .2rem;
+    padding:.4rem 2.9rem .4rem .2rem;
     border-radius:2px;
     cursor:pointer;
   }
@@ -1306,38 +1308,19 @@
     scopeTitleBtn.classList.toggle('active', !isSyn);
     scopeSynopsisBtn.classList.toggle('active', isSyn);
     if (viewMode !== 'authors') searchInput.placeholder = isSyn ? 'Search synopses…' : 'Search titles…';
-    scheduleScopeCollapse();
+    updateScopeCollapse();
   }
 
   // Author view always searches author names, so the toggle doesn't apply
-  // there and slides closed. Switching views rebuilds the whole results list,
-  // which can freeze the page for a moment (and the first paint of the new
-  // list can stall too); if the slide ran during that it would skip frames and
-  // look jumpy. So the slide is held back until frames are arriving steadily
-  // again (a few quick frames in a row), with a cap so it never waits long.
-  var scopeCollapsePending = false;
-  function whenFramesSettle(cb){
-    var start = performance.now(), last = start, calm = 0;
-    function tick(now){
-      now = now || performance.now();
-      calm = (now - last) < 45 ? calm + 1 : 0;
-      last = now;
-      if (calm >= 4 || now - start > 1000) cb();
-      else requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }
-  function scheduleScopeCollapse(){
-    if (scopeCollapsePending) return;
-    scopeCollapsePending = true;
-    whenFramesSettle(function(){
-      scopeCollapsePending = false;
-      var collapse = viewMode === 'authors';
-      scopeToggle.classList.toggle('collapsed', collapse);
-      // Keep the collapsed buttons out of tab order / screen readers.
-      if (collapse) scopeToggle.setAttribute('inert', ''); else scopeToggle.removeAttribute('inert');
-      scopeToggle.setAttribute('aria-hidden', collapse);
-    });
+  // there and slides closed (the CSS transition on .scope-toggle does the
+  // sliding). Author rows no longer expand in place, so rebuilding the list
+  // is cheap and the slide can simply run as soon as the view changes.
+  function updateScopeCollapse(){
+    var collapse = viewMode === 'authors';
+    scopeToggle.classList.toggle('collapsed', collapse);
+    // Keep the collapsed buttons out of tab order / screen readers.
+    if (collapse) scopeToggle.setAttribute('inert', ''); else scopeToggle.removeAttribute('inert');
+    scopeToggle.setAttribute('aria-hidden', collapse);
   }
   function setScope(scope){
     if (searchScope === scope) return;
@@ -2117,7 +2100,7 @@
     });
 
     resultsEl.innerHTML = slice.map(function(entry){
-      var isExpanded = authorExpandedSet.has(entry.name);
+      var isExpanded = false; // rows never expand; clicking opens the sidebar
 
       var bits = [];
       bits.push(entry.count + (entry.count === 1 ? ' story' : ' stories'));
@@ -2125,7 +2108,7 @@
       if (entry.latestAdded !== null) bits.push('Latest ' + fmtDays(entry.latestAdded));
       var metaHtml = bits.join('<span class="sep">\u00b7</span>');
 
-      var indicator = isExpanded ? '\u25b4 hide stories' : '\u25be show stories';
+      var indicator = 'view stories \u203a';
 
       var storiesHtml = '';
       if (isExpanded){
@@ -2247,10 +2230,8 @@
       if (e.target.closest('.author-stories')){
         return; // clicked empty space in the scroll area, not on an item - ignore so scrolling never closes anything
       }
-      var name = authorRow.dataset.author;
-      if (authorExpandedSet.has(name)) authorExpandedSet.delete(name);
-      else authorExpandedSet.add(name);
-      renderAuthorList(currentAuthorList);
+      // Authors no longer expand in place; the sidebar is the author page.
+      openAuthorPanel(authorRow.dataset.author, null);
       return;
     }
 
@@ -2303,10 +2284,7 @@
       var authorRow = e.target.closest('.author-row');
       if (!authorRow || e.target !== authorRow) return;
       e.preventDefault();
-      var name = authorRow.dataset.author;
-      if (authorExpandedSet.has(name)) authorExpandedSet.delete(name);
-      else authorExpandedSet.add(name);
-      renderAuthorList(currentAuthorList);
+      openAuthorPanel(authorRow.dataset.author, null);
       return;
     }
 
