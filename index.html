@@ -13,6 +13,7 @@
     --ink:#15120e;
     --ink-2:#1d1912;
     --ink-3:#242018;
+    --ink-4:#2f2a20;
     --parchment:#ede3cf;
     --parchment-dim:#c9bfa8;
     --brass:#a8823e;
@@ -161,6 +162,28 @@
     margin:0;
     line-height:1.25;
   }
+  .author-panel-namerow{
+    display:flex;
+    align-items:baseline;
+    flex-wrap:wrap;
+    column-gap:.75rem;
+  }
+  .author-panel-link{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    letter-spacing:.05em;
+    color:var(--brass-bright);
+    text-decoration:none;
+    white-space:nowrap;
+    opacity:0;
+    transition:opacity .15s ease;
+  }
+  .author-panel-link:hover{ text-decoration:underline; }
+  /* Revealed when hovering the name row or tabbing to the link; always shown
+     on touch devices, which have no hover. */
+  .author-panel-namerow:hover .author-panel-link,
+  .author-panel-link:focus-visible{ opacity:1; }
+  @media (hover:none){ .author-panel-link{ opacity:1; } }
   .author-panel-meta{
     font-family:'IBM Plex Mono', monospace;
     font-size:.7rem;
@@ -197,6 +220,7 @@
     border:1px solid var(--line);
     color:var(--muted);
     padding:.3rem .4rem;
+    min-height:31px;
     border-radius:2px;
     cursor:pointer;
     display:inline-flex;
@@ -782,6 +806,21 @@
     gap:.3rem;
   }
 
+  /* On the author page the sort buttons come first, so the divider goes
+     below them (between the buttons and the story list) instead of above. */
+  .author-stories.has-sort{
+    border-top:none;
+    padding-top:0;
+  }
+  /* Author-page sort buttons: fixed-ish width instead of stretching across
+     the whole row (the sidebar's buttons are unaffected). */
+  .author-row-sort .author-sort-btn{ flex:0 1 9.25rem; }
+  .author-stories.has-sort > .author-row-sort{
+    padding-bottom:.6rem;
+    margin-bottom:.2rem;
+    border-bottom:1px solid var(--line);
+  }
+
   .author-story-item{
     display:block;
     position:relative;
@@ -792,6 +831,10 @@
   .author-story-item:hover{ background:var(--ink-3); }
   a.author-story-item.chapter-link{ color:inherit; text-decoration:none; }
   .author-story-item.expanded{ background:var(--ink-3); }
+  /* Chapters live inside an expanded story item, which already uses --ink-3,
+     so the normal hover color was invisible there. Use a lighter shade. */
+  .author-story-item.expanded .chapter-link:hover,
+  .author-story-item.expanded .chapter-link:focus-visible{ background:var(--ink-4); }
 
   .story-item-top{
     display:flex;
@@ -871,7 +914,10 @@
   <div class="author-panel-head">
     <div>
       <p class="author-panel-eyebrow">Author</p>
-      <h2 id="author-panel-name"></h2>
+      <div class="author-panel-namerow">
+        <h2 id="author-panel-name"></h2>
+        <a id="author-panel-link" class="author-panel-link" href="#" target="_blank" rel="noopener noreferrer" title="Open this author's page on mcstories.com">Author page &#8599;</a>
+      </div>
       <p class="author-panel-meta" id="author-panel-meta"></p>
     </div>
     <button type="button" class="author-panel-close" id="author-panel-close" aria-label="Close">&times;</button>
@@ -1207,13 +1253,39 @@
     var isSyn = searchScope === 'synopsis';
     scopeTitleBtn.classList.toggle('active', !isSyn);
     scopeSynopsisBtn.classList.toggle('active', isSyn);
-    // Author view always searches author names, so the toggle doesn't apply there.
-    var collapse = viewMode === 'authors';
-    scopeToggle.classList.toggle('collapsed', collapse);
-    // Keep the collapsed buttons out of tab order / screen readers.
-    if (collapse) scopeToggle.setAttribute('inert', ''); else scopeToggle.removeAttribute('inert');
-    scopeToggle.setAttribute('aria-hidden', collapse);
     if (viewMode !== 'authors') searchInput.placeholder = isSyn ? 'Search synopses…' : 'Search titles…';
+    scheduleScopeCollapse();
+  }
+
+  // Author view always searches author names, so the toggle doesn't apply
+  // there and slides closed. Switching views rebuilds the whole results list,
+  // which can freeze the page for a moment (and the first paint of the new
+  // list can stall too); if the slide ran during that it would skip frames and
+  // look jumpy. So the slide is held back until frames are arriving steadily
+  // again (a few quick frames in a row), with a cap so it never waits long.
+  var scopeCollapsePending = false;
+  function whenFramesSettle(cb){
+    var start = performance.now(), last = start, calm = 0;
+    function tick(now){
+      now = now || performance.now();
+      calm = (now - last) < 45 ? calm + 1 : 0;
+      last = now;
+      if (calm >= 4 || now - start > 1000) cb();
+      else requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  function scheduleScopeCollapse(){
+    if (scopeCollapsePending) return;
+    scopeCollapsePending = true;
+    whenFramesSettle(function(){
+      scopeCollapsePending = false;
+      var collapse = viewMode === 'authors';
+      scopeToggle.classList.toggle('collapsed', collapse);
+      // Keep the collapsed buttons out of tab order / screen readers.
+      if (collapse) scopeToggle.setAttribute('inert', ''); else scopeToggle.removeAttribute('inert');
+      scopeToggle.setAttribute('aria-hidden', collapse);
+    });
   }
   function setScope(scope){
     if (searchScope === scope) return;
@@ -1412,6 +1484,9 @@
     var totalWords = authored.reduce(function(sum,s){ return sum + ('words' in s ? s.words : 0); }, 0);
 
     authorPanelNameEl.textContent = name;
+    // Author pages on the site are named after the author with spaces as dashes.
+    document.getElementById('author-panel-link').href =
+      'https://mcstories.com/Authors/' + encodeURIComponent(name.trim().replace(/\s+/g, '-')) + '.html';
     authorPanelMetaEl.textContent = authored.length.toLocaleString() + (authored.length === 1 ? ' story' : ' stories') +
       ' \u00b7 ' + totalWords.toLocaleString() + ' words total';
     renderAuthorPanelList();
@@ -1973,7 +2048,7 @@
             return rowSort.dir === 'asc' ? cmp : -cmp;
           });
         }
-        storiesHtml = '<div class="author-stories">' + authorRowSortButtonsHtml(entry.name) +
+        storiesHtml = '<div class="author-stories has-sort">' + authorRowSortButtonsHtml(entry.name) +
           rowStories.map(function(s){
             return storyItemHtml(s, authorStoryExpandedSet.has(s.href));
           }).join('') + '</div>';
