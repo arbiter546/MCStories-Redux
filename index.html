@@ -190,6 +190,30 @@
     color:var(--muted);
     margin:.4rem 0 0;
   }
+  .author-panel-head-actions{
+    display:flex;
+    align-items:center;
+    gap:.4rem;
+    flex-shrink:0;
+  }
+  .author-panel-bookmark{
+    flex-shrink:0;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    cursor:pointer;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:0;
+  }
+  .author-panel-bookmark svg{ width:14px; height:14px; display:block; }
+  .author-panel-bookmark:hover{ color:var(--parchment); border-color:var(--brass); }
+  .author-panel-bookmark.active{ color:var(--brass-bright); border-color:var(--brass); }
   .author-panel-close{
     flex-shrink:0;
     width:30px;
@@ -920,7 +944,10 @@
       </div>
       <p class="author-panel-meta" id="author-panel-meta"></p>
     </div>
-    <button type="button" class="author-panel-close" id="author-panel-close" aria-label="Close">&times;</button>
+    <div class="author-panel-head-actions">
+      <button type="button" class="author-panel-bookmark" id="author-panel-bookmark" aria-pressed="false" aria-label="Bookmark this author" title="Bookmark this author"></button>
+      <button type="button" class="author-panel-close" id="author-panel-close" aria-label="Close">&times;</button>
+    </div>
   </div>
   <div class="author-panel-sort" id="author-panel-sort">
     <button type="button" class="author-sort-btn" data-field="title">Title</button>
@@ -1104,18 +1131,32 @@
 
   function init(stories, tagDefs){
   var BOOKMARK_KEY = 'storyArchive.bookmarks.v1';
+  // Authors have their own, separate saved list (keyed by author name).
+  var AUTHOR_BOOKMARK_KEY = 'storyArchive.authorBookmarks.v1';
 
-  function loadBookmarks(){
+  function loadBookmarks(key){
     try {
-      var raw = localStorage.getItem(BOOKMARK_KEY);
+      var raw = localStorage.getItem(key);
       return new Set(raw ? JSON.parse(raw) : []);
     } catch(e){ return new Set(); }
   }
   var BASE_URL = 'https://mcstories.com/';
   function storyUrl(href){ return BASE_URL + href; }
-  var bookmarks = loadBookmarks();
+  var bookmarks = loadBookmarks(BOOKMARK_KEY);
+  var authorBookmarks = loadBookmarks(AUTHOR_BOOKMARK_KEY);
   function saveBookmarks(){
     try { localStorage.setItem(BOOKMARK_KEY, JSON.stringify(Array.from(bookmarks))); } catch(e){}
+  }
+  function saveAuthorBookmarks(){
+    try { localStorage.setItem(AUTHOR_BOOKMARK_KEY, JSON.stringify(Array.from(authorBookmarks))); } catch(e){}
+  }
+  function toggleAuthorBookmark(name){
+    if (!name) return;
+    if (authorBookmarks.has(name)) authorBookmarks.delete(name);
+    else authorBookmarks.add(name);
+    saveAuthorBookmarks();
+    updateSavedToggleLabel();
+    updateAuthorPanelBookmark();
   }
   function toggleBookmark(href){
     if (!href) return;
@@ -1133,6 +1174,17 @@
       '" data-href="' + escapeHtml(href) + '" aria-pressed="' + on + '" aria-label="' +
       (on ? 'Remove bookmark' : 'Bookmark this story') + '" title="' +
       (on ? 'Remove bookmark' : 'Bookmark this story') + '">' + icon + '</button>';
+  }
+
+  // Bookmark tab for an author row (same look as a story's tab).
+  function authorBookmarkBtnHtml(name){
+    var on = authorBookmarks.has(name);
+    var icon = on
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
+    var label = on ? 'Remove author bookmark' : 'Bookmark this author';
+    return '<button type="button" class="bookmark-btn author-bookmark-btn' + (on ? ' active' : '') +
+      '" data-author="' + escapeHtml(name) + '" aria-pressed="' + on + '" aria-label="' + label + '" title="' + label + '">' + icon + '</button>';
   }
 
   var tagLabels = {};
@@ -1299,20 +1351,29 @@
   var BOOKMARK_ICON_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
   var BOOKMARK_ICON_FILLED = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
 
-  // 'none' = no filter, 'include' = saved stories only, 'exclude' = hide saved stories
-  var savedState = 'none';
+  // 'none' = no filter, 'include' = saved only, 'exclude' = hide saved.
+  // The Saved button follows the current view: in Stories it filters/counts
+  // saved stories, in Authors it filters/counts saved authors. Each view
+  // remembers its own filter state when you switch back and forth.
+  var savedStateByMode = {stories: 'none', authors: 'none'};
+  function currentSavedKey(){ return viewMode === 'authors' ? 'authors' : 'stories'; }
   function updateSavedToggleLabel(){
-    var n = bookmarks.size;
-    savedToggle.classList.toggle('active', savedState === 'include');
-    savedToggle.classList.toggle('excluded', savedState === 'exclude');
-    savedToggle.setAttribute('aria-pressed', savedState === 'include');
-    savedToggleIcon.innerHTML = savedState === 'include' ? BOOKMARK_ICON_FILLED : BOOKMARK_ICON_OUTLINE;
-    var label = savedState === 'include' ? 'Saved only' : savedState === 'exclude' ? 'Hide saved' : 'Saved';
+    var key = currentSavedKey();
+    var state = savedStateByMode[key];
+    var n = (key === 'authors' ? authorBookmarks : bookmarks).size;
+    savedToggle.classList.toggle('active', state === 'include');
+    savedToggle.classList.toggle('excluded', state === 'exclude');
+    savedToggle.setAttribute('aria-pressed', state === 'include');
+    savedToggle.title = key === 'authors' ? 'Saved authors' : 'Saved stories';
+    savedToggleIcon.innerHTML = state === 'include' ? BOOKMARK_ICON_FILLED : BOOKMARK_ICON_OUTLINE;
+    var label = state === 'include' ? 'Saved only' : state === 'exclude' ? 'Hide saved' : 'Saved';
     savedToggleLabel.textContent = label + (n ? ' (' + n + ')' : '');
   }
   updateSavedToggleLabel();
   savedToggle.addEventListener('click', function(){
-    savedState = savedState === 'none' ? 'include' : savedState === 'include' ? 'exclude' : 'none';
+    var key = currentSavedKey();
+    var st = savedStateByMode[key];
+    savedStateByMode[key] = st === 'none' ? 'include' : st === 'include' ? 'exclude' : 'none';
     updateSavedToggleLabel();
     render();
   });
@@ -1490,6 +1551,7 @@
     authorPanelMetaEl.textContent = authored.length.toLocaleString() + (authored.length === 1 ? ' story' : ' stories') +
       ' \u00b7 ' + totalWords.toLocaleString() + ' words total';
     renderAuthorPanelList();
+    updateAuthorPanelBookmark();
 
     authorPanelEl.classList.add('open');
     authorPanelEl.setAttribute('aria-hidden', 'false');
@@ -1509,6 +1571,26 @@
     document.body.classList.remove('author-panel-open');
   }
 
+  var authorPanelBookmarkBtn = document.getElementById('author-panel-bookmark');
+  function updateAuthorPanelBookmark(){
+    if (!authorPanelName) return;
+    var on = authorBookmarks.has(authorPanelName);
+    var label = on ? 'Remove author bookmark' : 'Bookmark this author';
+    authorPanelBookmarkBtn.classList.toggle('active', on);
+    authorPanelBookmarkBtn.setAttribute('aria-pressed', on);
+    authorPanelBookmarkBtn.setAttribute('aria-label', label);
+    authorPanelBookmarkBtn.title = label;
+    authorPanelBookmarkBtn.innerHTML = on ? BOOKMARK_ICON_FILLED : BOOKMARK_ICON_OUTLINE;
+  }
+  authorPanelBookmarkBtn.addEventListener('click', function(){
+    toggleAuthorBookmark(authorPanelName);
+    // If the Authors list is what's showing behind the panel, keep its tabs
+    // (and any Saved filter) in step.
+    if (viewMode === 'authors'){
+      if (savedStateByMode.authors === 'none') renderAuthorList(currentAuthorList);
+      else render();
+    }
+  });
   authorPanelCloseBtn.addEventListener('click', closeAuthorPanel);
   authorPanelBackdrop.addEventListener('click', closeAuthorPanel);
   document.addEventListener('keydown', function(e){
@@ -1741,8 +1823,16 @@
     var excluded = excludedTags();
 
     return stories.filter(function(s){
-      if (savedState === 'include' && !bookmarks.has(s.href)) return false;
-      if (savedState === 'exclude' && bookmarks.has(s.href)) return false;
+      if (viewMode === 'authors'){
+        // Authors view: "Saved" refers to saved authors, not saved stories.
+        var as = savedStateByMode.authors;
+        if (as === 'include' && !authorBookmarks.has(s.author)) return false;
+        if (as === 'exclude' && authorBookmarks.has(s.author)) return false;
+      } else {
+        var ss = savedStateByMode.stories;
+        if (ss === 'include' && !bookmarks.has(s.href)) return false;
+        if (ss === 'exclude' && bookmarks.has(s.href)) return false;
+      }
 
       if (q){
         if (viewMode === 'authors'){
@@ -2055,6 +2145,7 @@
       }
 
       return '<div class="row author-row' + (isExpanded ? ' expanded' : '') + '" data-author="' + escapeHtml(entry.name) + '" tabindex="0" role="button" aria-expanded="' + isExpanded + '">' +
+        authorBookmarkBtnHtml(entry.name) +
         '<div class="row-top">' +
           '<span class="name">' + escapeHtml(entry.name) + '</span>' +
           '<span class="dash">\u2014</span>' +
@@ -2088,6 +2179,14 @@
 
     var bookmarkBtn = e.target.closest('.bookmark-btn');
     if (bookmarkBtn){
+      if (bookmarkBtn.classList.contains('author-bookmark-btn')){
+        toggleAuthorBookmark(bookmarkBtn.dataset.author);
+        // With no Saved filter on, just redraw the rows in place (keeps the
+        // list as far down as it's been loaded); otherwise re-filter.
+        if (savedStateByMode.authors === 'none') renderAuthorList(currentAuthorList);
+        else render();
+        return;
+      }
       toggleBookmark(bookmarkBtn.dataset.href);
       render();
       return;
@@ -2233,6 +2332,7 @@
   function render(){
     shown = pageSize;
     updateScopeToggle();
+    updateSavedToggleLabel();
     if (viewMode === 'authors'){
       var pool = applyFilters();
       currentAuthorList = sortAuthorList(buildAuthorList(pool));
