@@ -1,0 +1,79 @@
+name: Update stories.json
+
+on:
+  schedule:
+    # The archive posts its weekly batch on Saturday (occasionally a day late).
+    # A run with nothing new makes a single request and commits nothing, so the
+    # second run is a cheap safety net. Times are UTC; the odd minute avoids the
+    # top-of-the-hour rush when GitHub delays scheduled jobs.
+    - cron: "17 18 * * 0"   # Sunday
+    - cron: "17 18 * * 1"   # Monday
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only (don't commit anything)"
+        type: boolean
+        default: false
+      since:
+        description: "Optional: re-process batches after this date (YYYY-MM-DD)"
+        type: string
+        required: false
+
+permissions:
+  contents: write            # needed to push the updated JSON
+
+concurrency:
+  group: update-stories      # never run two updates at once
+  cancel-in-progress: false
+
+env:
+  SCRIPT: update_stories.py  # change these if the files live in a subfolder
+  JSON_PATH: stories.json
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Update stories.json
+        shell: bash          # bash with pipefail, so a script failure fails the job
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          SINCE: ${{ inputs.since }}
+        run: |
+          args=(--no-backup)
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          if [ -n "$SINCE" ]; then args+=(--since "$SINCE"); fi
+          python "$SCRIPT" "$JSON_PATH" "${args[@]}" 2>&1 | tee update.log
+
+      - name: Commit and push if changed
+        shell: bash
+        run: |
+          if git diff --quiet -- "$JSON_PATH"; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          summary=$(grep -E "stor(y|ies), [0-9]+ updated" update.log | tail -1 | sed -E 's/^.*INFO +//')
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$JSON_PATH"
+          git commit -m "Update stories.json: ${summary:-weekly sync}"
+          git push
+
+      - name: Add log to job summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f update.log ]; then
+            { echo '```'; cat update.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
