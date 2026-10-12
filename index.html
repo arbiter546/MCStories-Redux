@@ -612,7 +612,10 @@
   .scope-toggle button{ width:4.675rem; padding-left:0; padding-right:0; }
 
   /* --- Results --- */
-  #results{ display:grid; grid-template-columns:1fr; gap:.4rem; }
+  /* minmax(0,1fr), not 1fr: a bare 1fr track can't shrink below its widest
+     unbreakable content, so a long chapter title (plus author credit) in an
+     expanded row would push the whole page wider than a phone screen. */
+  #results{ display:grid; grid-template-columns:minmax(0,1fr); gap:.4rem; }
 
   .row{
     display:block;
@@ -775,7 +778,12 @@
     font-size:.92rem;
     color:var(--parchment);
     text-decoration:none;
-    flex-shrink:0;
+    /* May shrink to the item's content box (which stops short of the bookmark
+       tab) and wrap onto further lines, instead of running underneath it. */
+    flex:0 1 auto;
+    min-width:0;
+    max-width:100%;
+    overflow-wrap:break-word;
   }
 
   .author-link{
@@ -796,6 +804,48 @@
     color:var(--brass-bright);
     text-decoration-color:var(--brass-bright);
   }
+
+  /* Story header. The lead block is a wrapping flex row of two items:
+       1. "Title — by A - B - C"  (one inline flow; if it's too long for the
+          line, the names that don't fully fit wrap onto lines below it)
+       2. "Updated · chapters · words"  (a single item: it sits beside item 1
+          only if everything fits on one line, otherwise it moves down as a
+          whole - below any wrapped author lines, never beside them)
+     "▾ more" always stays on the FIRST line and follows the text: it starts
+     at the end of the details, and placeIndicator() (JS) moves it up behind
+     the last author that fits on line 1 when the details have dropped down.
+     If it can't follow any text it pins to the right edge (.pinned). */
+  .story-head{
+    contain:layout;
+    /* keeps "more" clear of the bookmark tab hanging in the row's corner */
+    margin-right:.75rem;
+  }
+  .story-lead{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    column-gap:1rem;
+    row-gap:.15rem;
+    min-width:0;
+  }
+  /* Small base size so wrapped author lines get a compact line box; the
+     title keeps its own (rem-based) size, so line 1 is unchanged. */
+  .story-id{ flex:0 1 auto; min-width:0; max-width:100%; font-size:.72rem; line-height:1.5; }
+  .story-lead .meta{ flex:0 1 auto; }
+  .story-lead .meta .nowrap{ white-space:nowrap; }
+  .story-head .expand-indicator{ white-space:nowrap; margin-left:.6em; }
+  .story-head .expand-indicator.pinned{ float:right; margin-left:.75rem; }
+  /* hidden only until its row has been placed, so it never visibly jumps */
+  .story-head:not(.placed) .expand-indicator{ visibility:hidden; }
+  .story-id .dash{ color:var(--line); font-size:1rem; margin:0 .1em; }
+  .by-chunk{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.01em;
+    color:var(--brass);
+    white-space:nowrap;
+  }
+  .by-dash{ color:var(--muted); }
 
   .row .synopsis{
     font-size:.88rem;
@@ -887,6 +937,44 @@
     color:var(--muted);
     white-space:nowrap;
     flex-shrink:0;
+  }
+
+  /* Chapter rows in multi-author stories: "Author(s) · 1,234 words".
+     On a wide row it all sits on one line. When the title and credit don't
+     fit side by side (phones, the narrow author panel, long collaborator
+     lists) the credit drops to its own right-aligned line under the title
+     rather than squeezing either one. */
+  .story-item-top.has-credit{
+    flex-wrap:wrap;
+    row-gap:.1rem;
+  }
+  .author-story-item .meta-mini.has-authors{
+    display:flex;
+    align-items:baseline;
+    justify-content:flex-end;
+    flex:0 1 auto;
+    min-width:0;
+    max-width:100%;
+    margin-left:auto;
+    white-space:normal;
+  }
+  .meta-mini .ch-authors{
+    min-width:0;
+    text-align:right;
+    color:var(--parchment-dim);
+  }
+  .meta-mini .ch-name{ white-space:nowrap; }
+  .meta-mini .ch-words{ flex:none; white-space:nowrap; }
+  .meta-mini .ch-dot{
+    flex:none;
+    width:3px;
+    height:3px;
+    margin:0 .7em;
+    border-radius:50%;
+    background:var(--brass);
+    opacity:.6;
+    position:relative;
+    top:-.28em;
   }
 
   .author-story-item .synopsis{ margin-top:.4rem; }
@@ -999,7 +1087,6 @@
       <div id="sentinel"></div>
 
       <footer>
-        Data assembled from the archive's own category and story pages · tags are the site's, not ours to redefine
       </footer>
     </div>
 
@@ -1361,9 +1448,62 @@
     render();
   });
 
-  var totalAuthorCount = Object.keys(stories.reduce(function(acc, s){ if (s.author) acc[s.author] = 1; return acc; }, {})).length;
+  // Everyone credited on a story, in byline order. `author` (first author) is
+  // kept in the data for compatibility; `authors` is the full list.
+  function authorsOf(s){
+    return (s.authors && s.authors.length) ? s.authors : (s.author ? [s.author] : []);
+  }
+
+  // True when a co-authored story's chapters do NOT all share the same credit
+  // (anthologies, tag-team serials). Only then are authors shown per chapter;
+  // when every chapter is by the same people, the byline already says it all.
+  function hasDifferingChapterCredits(s){
+    var base = authorsOf(s);
+    if (base.length < 2 || !s.chapters) return false;
+    var first = null;
+    for (var i = 0; i < s.chapters.length; i++){
+      var ch = s.chapters[i];
+      var key = ((ch.authors && ch.authors.length) ? ch.authors : base).slice().sort().join('\u0000');
+      if (first === null) first = key;
+      else if (key !== first) return true;
+    }
+    return false;
+  }
+
+  // How many of a story's words an author wrote. In a story with differing
+  // chapter credits that is just their chapters (so an anthology's total isn't
+  // credited in full to every contributor); otherwise it's the whole story.
+  function authorWords(s, name){
+    if (!('words' in s)) return 0;
+    if (!s._chapterCredits) return s.words;
+    var base = authorsOf(s);
+    return s.chapters.reduce(function(sum, ch){
+      var list = (ch.authors && ch.authors.length) ? ch.authors : base;
+      return list.indexOf(name) !== -1 ? sum + ch.words : sum;
+    }, 0);
+  }
+
+  var totalAuthorCount = Object.keys(stories.reduce(function(acc, s){
+    authorsOf(s).forEach(function(a){ acc[a] = 1; });
+    return acc;
+  }, {})).length;
 
   var viewMode = 'stories';
+
+  // "Last Updated" comes from the data itself: the newest date_added / date_updated
+  // of any story, so it follows stories.json with no manual edit.
+  var lastUpdatedText = (function(){
+    var newest = '';
+    stories.forEach(function(s){
+      if (s.date_added && s.date_added > newest) newest = s.date_added;
+      if (s.date_updated && s.date_updated > newest) newest = s.date_updated;
+    });
+    var p = newest.split('-');
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var mon = months[parseInt(p[1], 10) - 1];
+    if (p.length !== 3 || !mon) return '';
+    return ' Last Updated ' + mon + ' ' + parseInt(p[2], 10) + ', ' + p[0];
+  })();
 
   function updateTotalText(){
     if (viewMode === 'authors'){
@@ -1371,7 +1511,7 @@
       totalEl.textContent = totalAuthorCount.toLocaleString() + ' authors. Click one to see everything they\u2019ve written.';
     } else {
       pageTitleEl.textContent = 'Browse every story';
-      totalEl.textContent = stories.length.toLocaleString() + ' stories. Last Updated Aug 22, 2026';
+      totalEl.textContent = stories.length.toLocaleString() + ' stories.' + lastUpdatedText;
     }
   }
   updateTotalText();
@@ -1500,7 +1640,7 @@
 
   function renderAuthorPanelList(){
     if (!authorPanelName) return;
-    var authored = stories.filter(function(s){ return s.author === authorPanelName; }).slice().sort(function(a,b){
+    var authored = stories.filter(function(s){ return authorsOf(s).indexOf(authorPanelName) !== -1; }).slice().sort(function(a,b){
       var va = authorPanelSortValue(a, 'added'), vb = authorPanelSortValue(b, 'added');
       return va < vb ? 1 : (va > vb ? -1 : 0);
     });
@@ -1524,8 +1664,8 @@
     authorPanelSort = {field: 'added', dir: 'desc'};
     updateAuthorPanelSortButtons();
 
-    var authored = stories.filter(function(s){ return s.author === name; });
-    var totalWords = authored.reduce(function(sum,s){ return sum + ('words' in s ? s.words : 0); }, 0);
+    var authored = stories.filter(function(s){ return authorsOf(s).indexOf(name) !== -1; });
+    var totalWords = authored.reduce(function(sum,s){ return sum + authorWords(s, name); }, 0);
 
     authorPanelNameEl.textContent = name;
     // Author pages on the site are named after the author with spaces as dashes.
@@ -1702,6 +1842,7 @@
   stories.forEach(function(s){
     s._addedDays = toDays(s.date_added);
     s._updatedDays = toDays(s.date_updated);
+    s._chapterCredits = hasDifferingChapterCredits(s);
   });
 
   function buildSlider(containerId, minVal, maxVal, formatFn, labelMinEl, labelMaxEl, onChange){
@@ -1807,10 +1948,9 @@
 
     return stories.filter(function(s){
       if (viewMode === 'authors'){
-        // Authors view: "Saved" refers to saved authors, not saved stories.
-        var as = savedStateByMode.authors;
-        if (as === 'include' && !authorBookmarks.has(s.author)) return false;
-        if (as === 'exclude' && authorBookmarks.has(s.author)) return false;
+        // Authors view: "Saved" and the name search are applied per author
+        // after grouping (see authorEntryMatches), since one story can now
+        // belong to several authors who don't all match.
       } else {
         var ss = savedStateByMode.stories;
         if (ss === 'include' && !bookmarks.has(s.href)) return false;
@@ -1819,8 +1959,7 @@
 
       if (q){
         if (viewMode === 'authors'){
-          var inAuthor = s.author && s.author.toLowerCase().indexOf(q) !== -1;
-          if (!inAuthor) return false;
+          // matched per author, after grouping
         } else {
           var haystack = searchScope === 'synopsis' ? (s.synopsis || '') : s.title;
           if (haystack.toLowerCase().indexOf(q) === -1) return false;
@@ -1881,12 +2020,23 @@
     return sortStoriesList(applyFilters());
   }
 
+  // Author-level filters for the Authors tab: the "Saved" toggle and the
+  // name search (both formerly applied to a story's single author).
+  function authorEntryMatches(name, q){
+    var as = savedStateByMode.authors;
+    if (as === 'include' && !authorBookmarks.has(name)) return false;
+    if (as === 'exclude' && authorBookmarks.has(name)) return false;
+    if (q && name.toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  }
+
   function buildAuthorList(storyPool){
     var map = {};
     storyPool.forEach(function(s){
-      if (!s.author) return;
-      if (!map[s.author]) map[s.author] = [];
-      map[s.author].push(s);
+      authorsOf(s).forEach(function(a){
+        if (!map[a]) map[a] = [];
+        map[a].push(s);
+      });
     });
     return Object.keys(map).map(function(name){
       var arr = map[name].slice().sort(function(a,b){
@@ -1894,7 +2044,7 @@
         var db = (b._addedDays === null) ? -Infinity : b._addedDays;
         return db - da;
       });
-      var totalWords = arr.reduce(function(sum,s){ return sum + ('words' in s ? s.words : 0); }, 0);
+      var totalWords = arr.reduce(function(sum,s){ return sum + authorWords(s, name); }, 0);
       var latestAdded = arr.reduce(function(m,s){ return (s._addedDays !== null && (m === null || s._addedDays > m)) ? s._addedDays : m; }, null);
       var latestUpdated = arr.reduce(function(m,s){ return (s._updatedDays !== null && (m === null || s._updatedDays > m)) ? s._updatedDays : m; }, null);
       return { name: name, stories: arr, totalWords: totalWords, latestAdded: latestAdded, latestUpdated: latestUpdated, count: arr.length };
@@ -1971,15 +2121,196 @@
     return '<button type="button" class="' + cls + '" data-code="' + code + '">' + escapeHtml(label) + '</button>';
   }
 
+  // Author credit for chapter rows. Only stories whose chapters have
+  // DIFFERENT credits get one (see hasDifferingChapterCredits); solo stories
+  // and fully co-written stories (same people on every chapter) keep plain
+  // rows, because the story's byline already says who wrote it.
+  // Lists are joined the way the archive writes bylines: "A and B",
+  // "A; B and C" (semicolons, since some names contain commas).
+  // Each name is its own no-wrap span so a long credit only ever wraps
+  // between names, never in the middle of one ("G-" / "Man001").
+  function creditHtml(list){
+    var names = list.map(function(a){ return '<span class="ch-name">' + escapeHtml(a) + '</span>'; });
+    if (names.length <= 1) return names[0] || '';
+    return names.slice(0, -1).join(names.length > 2 ? '; ' : '') + ' and ' + names[names.length - 1];
+  }
+
+  // One chapter's title line: name on the left, "[authors ·] N words" on the right.
+  function chapterTopHtml(s, ch){
+    var name = '<span class="story-item-name">' + escapeHtml(ch.name) + '</span>';
+    var words = ch.words.toLocaleString() + ' words';
+    if (!s._chapterCredits){
+      return '<div class="story-item-top">' + name + '<span class="meta-mini">' + words + '</span></div>';
+    }
+    var credit = creditHtml((ch.authors && ch.authors.length) ? ch.authors : s.authors);
+    return '<div class="story-item-top has-credit">' + name +
+      '<span class="meta-mini has-authors">' +
+        '<span class="ch-authors">' + credit + '</span>' +
+        '<span class="ch-dot" aria-hidden="true"></span>' +
+        '<span class="ch-words">' + words + '</span>' +
+      '</span>' +
+    '</div>';
+  }
+
+  // "by A - B - C": each name is its own link (opens that author's panel).
+  // A name and the dash after it are one no-wrap unit, so a long list wraps
+  // onto further lines only between names, with dashes ending a line.
+  // Returns inline chunks that sit right after the title in the header.
+  function bylineHtml(s){
+    var list = authorsOf(s);
+    if (!list.length) return '';
+    var chunks = list.map(function(name, i){
+      return '<span class="by-chunk">' + (i === 0 ? 'by&nbsp;' : '') +
+        '<button type="button" class="author-link" data-author="' + escapeHtml(name) + '">' + escapeHtml(name) + '</button>' +
+        (i < list.length - 1 ? '<span class="by-dash" aria-hidden="true">&nbsp;-</span>' : '') +
+      '</span>';
+    });
+    return chunks.join(' ');
+  }
+
+  // --- Keeping "more" on the title's line, following the text -------------
+  // CSS can't put an element right after whatever happens to end line 1, so
+  // this measures each header and moves the indicator:
+  //   1. Details beside the authors (all on one line): it stays at the end
+  //      of the details - nothing to do.
+  //   2. Details dropped to their own line: it goes behind the last author
+  //      that still fits on line 1 together with it (authors that don't fit
+  //      wrap below, as before).
+  //   3. Nothing on line 1 can carry it (e.g. a title that itself wraps):
+  //      it pins to the right edge of line 1 - "its wall".
+  function sameLine(rect, centerY){
+    return Math.abs((rect.top + rect.bottom) / 2 - centerY) < 8;
+  }
+
+  function placeIndicator(head){
+    var more = head.querySelector('.expand-indicator');
+    if (!more) return;
+    var id = head.querySelector('.story-id');
+    var meta = head.querySelector('.meta');
+    var nameEl = id.querySelector('.name');
+    var dash = id.querySelector('.dash');
+    var chunks = id.querySelectorAll('.by-chunk');
+
+    // Start from home (end of details) so re-measuring after a resize is clean.
+    more.classList.remove('pinned');
+    var oldBreak = id.querySelector('.by-break');
+    if (oldBreak) oldBreak.parentNode.removeChild(oldBreak);
+    meta.appendChild(more);
+
+    // 1. Details share the title's flex line: everything fits on one line.
+    if (meta.getBoundingClientRect().top < id.getBoundingClientRect().bottom - 1) return;
+
+    // Line 1 = the first line of the title.
+    var first = nameEl.getClientRects()[0];
+    if (!first) return;
+    var lineY = (first.top + first.bottom) / 2;
+
+    // Which author chunks are on line 1 (they're no-wrap, so one rect each)?
+    var last = -1;
+    for (var i = 0; i < chunks.length; i++){
+      if (sameLine(chunks[i].getBoundingClientRect(), lineY)) last = i; else break;
+    }
+    // Try behind the last chunk on line 1; if "more" doesn't fit there too,
+    // that chunk drops below and we try the one before it, and so on.
+    for (var k = last; k >= -1; k--){
+      if (k >= 0){
+        chunks[k].appendChild(more);
+      } else if (dash){
+        // Not even the first author fits together with "more": it stays up
+        // beside the title and every author moves to the line below.
+        dash.parentNode.insertBefore(more, dash.nextSibling);
+        var br = document.createElement('br');
+        br.className = 'by-break';
+        more.parentNode.insertBefore(br, more.nextSibling);
+      } else break;
+      if (sameLine(more.getBoundingClientRect(), lineY)) return;
+      if (k < 0){ var b2 = id.querySelector('.by-break'); if (b2) b2.parentNode.removeChild(b2); }
+    }
+    // 3. Nothing fits: pin it to the right edge of the first line.
+    more.classList.add('pinned');
+    id.insertBefore(more, id.firstChild);
+  }
+
+  // Placing is cheap but not free, so it's done in two tiers:
+  //   - rows on (or near) the screen are placed SYNCHRONOUSLY, in the same
+  //     task as the DOM change that needs it, i.e. before the browser paints.
+  //     Without this, every re-render (expanding/collapsing a story, resizing,
+  //     opening the author panel) would show a frame or two of unplaced rows:
+  //     "more" hidden and multi-author text in its un-measured layout.
+  //   - everything further away is placed lazily as it scrolls toward the
+  //     screen (the list can grow to thousands of rows).
+  var PLACE_MARGIN = 700;   // px above/below the viewport that count as "near"
+  var placeEpoch = 0;       // bumped whenever line breaks may have changed
+
+  function ensurePlaced(head){
+    if (head._placeEpoch === placeEpoch) return;     // already right for this width
+    placeIndicator(head);
+    head._placeEpoch = placeEpoch;
+    head.classList.add('placed');
+  }
+
+  function placeNearViewport(){
+    var heads = resultsEl.querySelectorAll('.story-head');
+    var n = heads.length;
+    if (!n) return;
+    var vh = window.innerHeight;
+    // Rows are in document order, so binary-search the first one that reaches
+    // the near zone instead of measuring thousands of rows.
+    var lo = 0, hi = n;
+    while (lo < hi){
+      var mid = (lo + hi) >> 1;
+      if (heads[mid].getBoundingClientRect().bottom < -PLACE_MARGIN) lo = mid + 1; else hi = mid;
+    }
+    // Read first, then write: collect the near rows before moving anything.
+    var near = [];
+    for (var i = lo; i < n; i++){
+      if (heads[i].getBoundingClientRect().top > vh + PLACE_MARGIN) break;
+      near.push(heads[i]);
+    }
+    near.forEach(ensurePlaced);
+  }
+
+  // Everything else is placed as it scrolls near. Rows stay observed so a row
+  // that was placed for an older width is fixed when it comes back into range.
+  var placeIO = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (en.isIntersecting) ensurePlaced(en.target);
+    });
+  }, { rootMargin: PLACE_MARGIN + 'px 0px' });
+
+  function observeHeads(){
+    placeIO.disconnect();
+    resultsEl.querySelectorAll('.story-head').forEach(function(h){ placeIO.observe(h); });
+  }
+
+  // Line breaks change when the column width changes (window resize, author
+  // panel sliding open/closed) and when web fonts arrive. ResizeObserver runs
+  // before paint, so near rows are re-placed without ever showing stale text.
+  function relayoutIndicators(){
+    placeEpoch++;
+    placeNearViewport();
+  }
+  if (window.ResizeObserver){
+    var lastResultsWidth = resultsEl.clientWidth;
+    new ResizeObserver(function(){
+      var w = resultsEl.clientWidth;
+      if (w !== lastResultsWidth){ lastResultsWidth = w; relayoutIndicators(); }
+    }).observe(resultsEl);
+  }
+  if (document.fonts){
+    if (document.fonts.ready) document.fonts.ready.then(relayoutIndicators);
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', relayoutIndicators);
+  }
+
   function renderList(list){
     var slice = list.slice(0, shown);
     resultsEl.innerHTML = slice.map(function(s){
-      var metaHtml, synopsisHtml = '';
+      var metaHtml, synopsisHtml = '', bylineInline = '';
       var isExpanded = expandedSet.has(s.href);
 
       if ('words' in s){
         var bits = [];
-        if (s.author) bits.push('by <button type="button" class="author-link" data-author="' + escapeHtml(s.author) + '">' + escapeHtml(s.author) + '</button>');
+        bylineInline = bylineHtml(s);
         var added = fmtDate(s.date_added);
         var updated = fmtDate(s.date_updated);
         if (updated) bits.push('Updated ' + updated);
@@ -1987,7 +2318,10 @@
         var chapCount = s.chapters ? s.chapters.length : 0;
         bits.push(chapCount + (chapCount === 1 ? ' chapter' : ' chapters'));
         bits.push(s.words.toLocaleString() + ' words');
-        metaHtml = bits.join('<span class="sep">\u00b7</span>');
+        // Each detail is a no-wrap unit so "7 chapters" never splits; the
+        // <wbr> after each dot is the only place the line may break.
+        metaHtml = bits.map(function(b){ return '<span class="nowrap">' + b + '</span>'; })
+                       .join('<span class="sep">\u00b7</span><wbr>');
         if (s.synopsis){
           var text = isExpanded ? s.synopsis : truncate(s.synopsis, 220);
           synopsisHtml = '<p class="synopsis">' + escapeHtml(text) + '</p>';
@@ -2004,10 +2338,7 @@
         if (s.chapters && s.chapters.length){
           synopsisHtml += '<div class="author-stories">' + s.chapters.map(function(ch){
             return '<a class="author-story-item chapter-link" href="' + storyUrl(ch.href) + '" target="_blank" rel="noopener noreferrer">' +
-              '<div class="story-item-top">' +
-                '<span class="story-item-name">' + escapeHtml(ch.name) + '</span>' +
-                '<span class="meta-mini">' + ch.words.toLocaleString() + ' words</span>' +
-              '</div>' +
+              chapterTopHtml(s, ch) +
             '</a>';
           }).join('') + '</div>';
         }
@@ -2018,14 +2349,21 @@
 
       return '<div class="row' + (isExpanded ? ' expanded' : '') + '" data-href="' + escapeHtml(s.href) + '" tabindex="0" role="button" aria-expanded="' + isExpanded + '">' +
         bookmarkBtnHtml(s.href) +
-        '<div class="row-top">' +
-          titleHtml +
-          '<span class="dash">\u2014</span>' +
-          '<span class="meta">' + metaHtml + (indicator ? ' <span class="expand-indicator">' + indicator + '</span>' : '') + '</span>' +
+        '<div class="story-head">' +
+          '<div class="story-lead">' +
+            '<div class="story-id">' + titleHtml +
+              (bylineInline ? ' <span class="dash">\u2014</span> ' + bylineInline : '') +
+            '</div>' +
+            '<span class="meta">' + metaHtml +
+              (indicator ? '<span class="expand-indicator">' + indicator + '</span>' : '') +
+            '</span>' +
+          '</div>' +
         '</div>' +
         synopsisHtml +
       '</div>';
     }).join('');
+    placeNearViewport();   // before paint: nothing on screen is ever unplaced
+    observeHeads();
     emptyEl.hidden = list.length !== 0;
     countEl.textContent = list.length.toLocaleString() + ' result' + (list.length===1?'':'s') +
       (shown < list.length ? ' \u00b7 showing first ' + Math.min(shown, list.length).toLocaleString() : '');
@@ -2066,10 +2404,7 @@
       if (s.chapters && s.chapters.length){
         chaptersHtml = '<div class="author-stories">' + s.chapters.map(function(ch){
           return '<a class="author-story-item chapter-link" href="' + storyUrl(ch.href) + '" target="_blank" rel="noopener noreferrer">' +
-            '<div class="story-item-top">' +
-              '<span class="story-item-name">' + escapeHtml(ch.name) + '</span>' +
-              '<span class="meta-mini">' + ch.words.toLocaleString() + ' words</span>' +
-            '</div>' +
+            chapterTopHtml(s, ch) +
           '</a>';
         }).join('') + '</div>';
       }
@@ -2304,7 +2639,9 @@
   function escapeHtml(str){
     var d = document.createElement('div');
     d.textContent = str;
-    return d.innerHTML;
+    // innerHTML leaves " alone, which truncates attribute values such as
+    // data-author="BZ"2"" - escape it so names containing quotes survive.
+    return d.innerHTML.replace(/"/g, '&quot;');
   }
 
   function render(){
@@ -2313,7 +2650,10 @@
     updateSavedToggleLabel();
     if (viewMode === 'authors'){
       var pool = applyFilters();
-      currentAuthorList = sortAuthorList(buildAuthorList(pool));
+      var authorQuery = searchInput.value.trim().toLowerCase();
+      currentAuthorList = sortAuthorList(buildAuthorList(pool).filter(function(entry){
+        return authorEntryMatches(entry.name, authorQuery);
+      }));
       renderAuthorList(currentAuthorList);
     } else {
       currentFiltered = filterStories();
