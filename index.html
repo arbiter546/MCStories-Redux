@@ -887,6 +887,11 @@
     white-space:nowrap;
   }
   .by-dash{ color:var(--muted); }
+  /* Dash between the byline and the details ("Title — by A — Updated ..."). Only
+     shown while the details sit beside the byline on the same line; placeIndicator()
+     toggles .meta-inline on the header. */
+  .meta-dash{ display:none; color:var(--line); font-size:1rem; margin:0 .4em 0 -.55rem; }
+  .story-head.meta-inline .meta-dash{ display:inline; }
 
   .row .synopsis{
     font-size:.88rem;
@@ -2252,7 +2257,11 @@
     meta.appendChild(more);
 
     // 1. Details share the title's flex line: everything fits on one line.
+    //    Measure with the byline-to-details dash visible; keep it only if that
+    //    still fits beside the byline, otherwise hide it (details wrap below).
+    head.classList.add('meta-inline');
     if (meta.getBoundingClientRect().top < id.getBoundingClientRect().bottom - 1) return;
+    head.classList.remove('meta-inline');
 
     // Line 1 = the first line of the title.
     var first = nameEl.getClientRects()[0];
@@ -2408,7 +2417,7 @@
             '<div class="story-id">' + titleHtml +
               (bylineInline ? ' <span class="dash">\u2014</span> ' + bylineInline : '') +
             '</div>' +
-            '<span class="meta">' + metaHtml +
+            '<span class="meta">' + (bylineInline ? '<span class="meta-dash" aria-hidden="true">\u2014</span>' : '') + metaHtml +
               (indicator ? '<span class="expand-indicator">' + indicator + '</span>' : '') +
             '</span>' +
           '</div>' +
