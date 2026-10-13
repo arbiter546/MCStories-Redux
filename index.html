@@ -168,6 +168,34 @@
     box-shadow:0 1px 0 var(--line);
   }
 
+  /* "Back to top" button: sits in the header directly below the close button
+     (absolutely positioned so showing it never changes the header height)
+     and fades in once the panel has scrolled. */
+  .author-panel-totop{
+    position:absolute;
+    top:calc(100% + .4rem);
+    right:0;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    cursor:pointer;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:0;
+    opacity:0;
+    transform:translateY(-4px);
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .author-panel-totop.show{ opacity:1; transform:none; pointer-events:auto; }
+  .author-panel-totop:hover{ color:var(--parchment); border-color:var(--brass); }
+  @media (prefers-reduced-motion:reduce){ .author-panel-totop{ transition:none; } }
+
   .author-panel-head{
     display:flex;
     align-items:flex-start;
@@ -223,6 +251,7 @@
     align-items:center;
     gap:.4rem;
     flex-shrink:0;
+    position:relative;
   }
   .author-panel-bookmark{
     flex-shrink:0;
@@ -344,7 +373,8 @@
   }
 
   #search{
-    flex:1 1 220px;
+    flex:1 1 120px;
+    min-width:0;
     background:var(--ink-2);
     border:1px solid var(--line);
     color:var(--parchment);
@@ -598,23 +628,6 @@
   }
   .clear-link:hover{ color:var(--parchment); }
 
-  .status-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    margin-bottom:1rem;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:.78rem;
-    color:var(--muted);
-  }
-
-  .status-row-right{
-    display:flex;
-    align-items:center;
-    gap:.9rem;
-    margin-left:auto;
-  }
-  .status-row-right .clear-link{ padding:.2rem 0; }
   /* Search-scope toggle: same segmented look and size as Stories/Authors.
      Each button is given the same fixed width those two buttons end up with
      (their labels are the same length), so Title/Synopsis match instead of
@@ -728,7 +741,7 @@
     background:var(--ink-2);
     border:1px solid var(--line);
     color:var(--muted);
-    padding:.6rem .8rem;
+    padding:.55rem .7rem;
     border-radius:2px;
     cursor:pointer;
     white-space:nowrap;
@@ -1066,6 +1079,9 @@
     <div class="author-panel-head-actions">
       <button type="button" class="author-panel-bookmark" id="author-panel-bookmark" aria-pressed="false" aria-label="Bookmark this author" title="Bookmark this author"></button>
       <button type="button" class="author-panel-close" id="author-panel-close" aria-label="Close">&times;</button>
+      <button type="button" class="author-panel-totop" id="author-panel-totop" aria-label="Scroll to top" title="Scroll to top" tabindex="-1">
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+    </button>
     </div>
   </div>
   <div class="author-panel-sort" id="author-panel-sort">
@@ -1074,8 +1090,8 @@
     <button type="button" class="author-sort-btn" data-field="updated">Updated</button>
     <button type="button" class="author-sort-btn" data-field="words">Word Count</button>
   </div>
-</div>
-<div class="author-panel-list" id="author-panel-list"></div>
+  </div>
+  <div class="author-panel-list" id="author-panel-list"></div>
 </aside>
 
 <div class="wrap">
@@ -1101,14 +1117,8 @@
             <button type="button" id="view-stories" class="active">Stories</button>
             <button type="button" id="view-authors">Authors</button>
           </div>
-        </div>
-      </div>
-
-      <div class="status-row">
-        <span id="resultcount"></span>
-        <div class="status-row-right">
+          <button type="button" id="saved-toggle" class="saved-toggle" aria-pressed="false"><span class="saved-toggle-icon"></span><span class="saved-toggle-label"></span></button>
           <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
-          <button type="button" id="saved-toggle" class="saved-toggle" aria-pressed="false"><span class="saved-toggle-icon"></span><span class="saved-toggle-label">Saved</span></button>
         </div>
       </div>
 
@@ -1407,7 +1417,6 @@
   var clearBtn = document.getElementById('clearall');
   var resultsEl = document.getElementById('results');
   var emptyEl = document.getElementById('emptystate');
-  var countEl = document.getElementById('resultcount');
   var totalEl = document.getElementById('totalcount');
   var pageTitleEl = document.getElementById('pagetitle');
   var sentinel = document.getElementById('sentinel');
@@ -1464,10 +1473,12 @@
     savedToggle.classList.toggle('active', state === 'include');
     savedToggle.classList.toggle('excluded', state === 'exclude');
     savedToggle.setAttribute('aria-pressed', state === 'include');
-    savedToggle.title = key === 'authors' ? 'Saved authors' : 'Saved stories';
     savedToggleIcon.innerHTML = state === 'include' ? BOOKMARK_ICON_FILLED : BOOKMARK_ICON_OUTLINE;
-    var label = state === 'include' ? 'Saved only' : state === 'exclude' ? 'Hide saved' : 'Saved';
-    savedToggleLabel.textContent = label + (n ? ' (' + n + ')' : '');
+    var what = key === 'authors' ? 'Saved authors' : 'Saved stories';
+    var mode = state === 'include' ? 'showing only saved' : state === 'exclude' ? 'hiding saved' : 'click to filter';
+    savedToggle.title = what + ' (' + mode + ')';
+    savedToggle.setAttribute('aria-label', what + ': ' + n + ', ' + mode);
+    savedToggleLabel.textContent = n;
   }
   updateSavedToggleLabel();
   savedToggle.addEventListener('click', function(){
@@ -1687,6 +1698,18 @@
     }).join('');
   }
 
+  var authorPanelToTopBtn = document.getElementById('author-panel-totop');
+  function updateAuthorPanelToTop(){
+    var on = authorPanelEl.scrollTop > 0;
+    authorPanelToTopBtn.classList.toggle('show', on);
+    authorPanelToTopBtn.tabIndex = on ? 0 : -1;
+  }
+  authorPanelEl.addEventListener('scroll', updateAuthorPanelToTop, {passive:true});
+  authorPanelToTopBtn.addEventListener('click', function(){
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    authorPanelEl.scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'});
+  });
+
   function openAuthorPanel(name, triggerHref){
     authorPanelName = name;
     authorPanelTriggerHref = triggerHref || null;
@@ -1711,6 +1734,7 @@
     authorPanelBackdrop.classList.add('show');
     document.body.classList.add('author-panel-open');
     authorPanelEl.scrollTop = 0;
+    updateAuthorPanelToTop();
   }
 
   function closeAuthorPanel(){
@@ -2395,8 +2419,6 @@
     placeNearViewport();   // before paint: nothing on screen is ever unplaced
     observeHeads();
     emptyEl.hidden = list.length !== 0;
-    countEl.textContent = list.length.toLocaleString() + ' result' + (list.length===1?'':'s') +
-      (shown < list.length ? ' \u00b7 showing first ' + Math.min(shown, list.length).toLocaleString() : '');
   }
 
   // Renders one expandable story entry used both in the full Authors view
@@ -2512,8 +2534,6 @@
     });
 
     emptyEl.hidden = list.length !== 0;
-    countEl.textContent = list.length.toLocaleString() + ' author' + (list.length===1?'':'s') +
-      (shown < list.length ? ' \u00b7 showing first ' + Math.min(shown, list.length).toLocaleString() : '');
   }
 
   resultsEl.addEventListener('click', function(e){
