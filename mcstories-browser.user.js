@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MCStories Archive Browser
 // @namespace    https://github.com/your-name/mcstories-browser
-// @version      1.2.0
+// @version      1.3.0
 // @description  Adds a searchable, filterable browser (tags, authors, word counts, bookmarks) over the MCStories archive, plus an optional dark reading theme.
 // @match        *://mcstories.com/*
 // @match        *://www.mcstories.com/*
@@ -87,6 +87,37 @@
     'body ::selection{background:var(--mco-brass)!important;color:var(--mco-ink)!important}'
   ].join('\n');
 
+  // ---- Chapter page: make the author's name in the byline a link ----------
+  function enhanceReader() {
+    var byline = document.querySelector('article#mcstories > h3.byline');
+    if (!byline || !document.getElementById('masthead')) return;
+    var spans = byline.querySelectorAll('.docAuthor');
+    if (!spans.length) return;
+
+    // Author links the page already carries (hidden by the theme, but still in the DOM).
+    var known = {};
+    var anchors = document.querySelectorAll('nav.arrows a[href*="/Authors/"], nav a[href*="/Authors/"]');
+    Array.prototype.forEach.call(anchors, function (a) {
+      var name = (a.textContent || '').replace(/^\s*Authors?:\s*/i, '').trim().toLowerCase();
+      if (name && !known[name]) known[name] = a.href;
+    });
+    var rel = document.querySelectorAll('link[rel~="author"][href]');
+
+    Array.prototype.forEach.call(spans, function (span) {
+      if (span.querySelector('a')) return; // already a link
+      var name = (span.textContent || '').trim();
+      if (!name) return;
+      var href = known[name.toLowerCase()];
+      if (!href && rel.length === 1 && spans.length === 1) href = rel[0].href;
+      if (!href) href = location.origin + '/Authors/' + encodeURIComponent(name.replace(/\s+/g, '-')) + '.html';
+      var link = document.createElement('a');
+      link.href = href;
+      link.title = 'More stories by ' + name;
+      while (span.firstChild) link.appendChild(span.firstChild);
+      span.appendChild(link);
+    });
+  }
+
   // ---- Reader layout (chapter pages only) ---------------------------------
   // Scoped with :has() to pages shaped like a chapter: an #masthead heading and
   // an #mcstories article with a byline. Every other page keeps the plain theme.
@@ -94,9 +125,6 @@
   var MONO = "'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace";
   var SERIF = "'Source Serif 4',Georgia,serif";
   var DISPLAY = "'Fraunces',Georgia,serif";
-  var PILL = 'display:inline-block!important;font:500 .74rem/1.2 ' + MONO + '!important;letter-spacing:.04em!important;' +
-    'padding:.45rem .85rem!important;border:1px solid var(--mco-line)!important;border-radius:999px!important;' +
-    'text-decoration:none!important;color:var(--mco-bright)!important';
   var READER_RULES = [
     // Page: one centered column, content laid out as wrapping rows.
     ['&', 'display:flex!important;flex-wrap:wrap!important;align-items:center!important;column-gap:.6rem!important;row-gap:.5rem!important;' +
@@ -107,15 +135,18 @@
           'font:500 .72rem/1.4 ' + MONO + '!important;letter-spacing:.2em!important;text-transform:uppercase!important'],
     ['& > h1#masthead a', 'color:var(--mco-brass)!important;text-decoration:none!important'],
     ['& > h1#masthead a:hover', 'color:var(--mco-bright)!important'],
+
+    // The site nav, the "Story:" link and the "Author:" link are hidden (the author's
+    // name in the byline links to their page instead). Any other link inside
+    // nav.arrows, such as previous/next chapter, is deliberately left alone.
+    ['& > nav.site, & > nav.story', 'display:none!important'],
+    ['& > nav.arrows a[href*="/Authors/"]', 'display:none!important'],
+    ['& > nav.arrows:not(:has(a:not([href*="/Authors/"])))', 'display:none!important'],
+    ['& > nav.arrows', 'flex:0 0 100%!important;margin:0!important;padding:0!important;text-align:left!important'],
+    ['& > h1#masthead', 'margin-bottom:0!important'],
     // font-size:0 on the nav hides the " · " separators; links set their own size.
-    ['& > nav.site', 'flex:0 0 100%!important;font-size:0!important;line-height:2!important;margin:0 0 1.1rem!important;padding:0!important;text-align:left!important'],
-    ['& > nav.site a, & > nav.site a:visited', 'font-size:.82rem!important;margin-right:1.1rem!important;white-space:nowrap!important;color:var(--mco-dim)!important;text-decoration:none!important'],
-    ['& > nav.site a:hover', 'color:var(--mco-text)!important'],
 
     // Story / author / chapter links become pills.
-    ['& > nav.story, & > nav.arrows', 'flex:0 0 auto!important;margin:0!important;padding:0!important;font-size:0!important;display:flex!important;gap:.5rem!important;flex-wrap:wrap!important'],
-    ['& > nav.story a, & > nav.story a:visited, & > nav.arrows a, & > nav.arrows a:visited', PILL],
-    ['& > nav.story a:hover, & > nav.arrows a:hover', 'border-color:var(--mco-brass)!important;color:var(--mco-text)!important'],
 
     // Article: a column whose children are re-ordered visually (title first).
     ['& > article#mcstories', 'flex:0 0 100%!important;display:flex!important;flex-direction:column!important;width:auto!important;max-width:none!important;' +
@@ -124,6 +155,8 @@
     ['& > article#mcstories > h3.title', 'order:1;margin:0 0 .5rem!important;text-align:left!important;font:600 clamp(2rem,6vw,2.9rem)/1.08 ' + DISPLAY + '!important;letter-spacing:-.015em!important'],
     ['& > article#mcstories > h3.byline', 'order:2;margin:0 0 1.1rem!important;text-align:left!important;font:400 1.05rem/1.4 ' + SERIF + '!important;color:var(--mco-dim)!important'],
     ['& > article#mcstories > h3.byline .docAuthor', 'color:var(--mco-bright)!important;font-style:italic!important'],
+    ['& > article#mcstories > h3.byline .docAuthor a, & > article#mcstories > h3.byline .docAuthor a:visited', 'color:var(--mco-bright)!important;text-decoration:underline transparent!important;text-underline-offset:.2em!important;transition:text-decoration-color .15s ease'],
+    ['& > article#mcstories > h3.byline .docAuthor a:hover, & > article#mcstories > h3.byline .docAuthor a:focus-visible', 'text-decoration-color:var(--mco-bright)!important'],
     // The archive's age notice: kept visible, shown as a small note under the byline.
     ['& > article#mcstories > header', 'order:3;margin:0 0 .5rem!important;padding:0!important;align-self:flex-start!important'],
     ['& > article#mcstories > header section.disclaimer', 'border:1px solid var(--mco-line)!important;border-radius:8px!important;padding:.55rem .85rem!important'],
@@ -142,7 +175,6 @@
     ['& > article#mcstories > footer section.afterword p', 'font-size:.95rem!important;line-height:1.65!important;margin:0 0 .9em!important;color:var(--mco-dim)!important'],
 
     // Bottom of the page: same pills, then a muted site nav and hosting credit.
-    ['& > article#mcstories ~ nav.site', 'margin:1.25rem 0 .25rem!important;padding-top:1.25rem!important;border-top:1px solid var(--mco-line)!important'],
     ['& > nav#blurb', 'flex:0 0 100%!important;text-align:center!important;margin:.25rem 0 0!important;padding:0!important;font:400 .72rem/1.5 ' + MONO + '!important;color:var(--mco-dim)!important;opacity:.7'],
     ['& > nav#blurb a, & > nav#blurb a:visited', 'color:var(--mco-dim)!important;text-decoration-color:var(--mco-line)!important']
   ];
@@ -271,6 +303,7 @@
   }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  function onReady() { try { enhanceReader(); } catch (e) {} init(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', onReady);
+  else onReady();
 })();
