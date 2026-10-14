@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MCStories Archive Browser
 // @namespace    https://github.com/your-name/mcstories-browser
-// @version      1.1.0
+// @version      1.2.0
 // @description  Adds a searchable, filterable browser (tags, authors, word counts, bookmarks) over the MCStories archive, plus an optional dark reading theme.
 // @match        *://mcstories.com/*
 // @match        *://www.mcstories.com/*
@@ -22,7 +22,7 @@
   // ---- Settings -----------------------------------------------------------
   // Where the story metadata (authors, tags, synopses, word counts) lives.
   // Fetched once and cached; no story text is ever downloaded or stored.
-  var DATA_URL = "https://raw.githubusercontent.com/arbiter546/MCStories-Redux/refs/heads/main/stories.json";
+  var DATA_URL = "https://raw.githubusercontent.com/arbiter456/MCStories-Redux/main/stories.json";
   var CACHE_TTL_MS = 6 * 60 * 60 * 1000; // re-check every 6 hours
   var CACHE_KEY = 'mco.data.v1';
 
@@ -87,6 +87,69 @@
     'body ::selection{background:var(--mco-brass)!important;color:var(--mco-ink)!important}'
   ].join('\n');
 
+  // ---- Reader layout (chapter pages only) ---------------------------------
+  // Scoped with :has() to pages shaped like a chapter: an #masthead heading and
+  // an #mcstories article with a byline. Every other page keeps the plain theme.
+  var READER = 'body:has(> h1#masthead):has(> article#mcstories > h3.byline)';
+  var MONO = "'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace";
+  var SERIF = "'Source Serif 4',Georgia,serif";
+  var DISPLAY = "'Fraunces',Georgia,serif";
+  var PILL = 'display:inline-block!important;font:500 .74rem/1.2 ' + MONO + '!important;letter-spacing:.04em!important;' +
+    'padding:.45rem .85rem!important;border:1px solid var(--mco-line)!important;border-radius:999px!important;' +
+    'text-decoration:none!important;color:var(--mco-bright)!important';
+  var READER_RULES = [
+    // Page: one centered column, content laid out as wrapping rows.
+    ['&', 'display:flex!important;flex-wrap:wrap!important;align-items:center!important;column-gap:.6rem!important;row-gap:.5rem!important;' +
+          'max-width:42rem!important;padding:1.5rem 1.25rem 4rem!important'],
+
+    // Slim header: small archive name, then quiet nav links.
+    ['& > h1#masthead', 'flex:0 0 100%!important;margin:0 0 .35rem!important;padding:0!important;text-align:left!important;' +
+          'font:500 .72rem/1.4 ' + MONO + '!important;letter-spacing:.2em!important;text-transform:uppercase!important'],
+    ['& > h1#masthead a', 'color:var(--mco-brass)!important;text-decoration:none!important'],
+    ['& > h1#masthead a:hover', 'color:var(--mco-bright)!important'],
+    // font-size:0 on the nav hides the " · " separators; links set their own size.
+    ['& > nav.site', 'flex:0 0 100%!important;font-size:0!important;line-height:2!important;margin:0 0 1.1rem!important;padding:0!important;text-align:left!important'],
+    ['& > nav.site a, & > nav.site a:visited', 'font-size:.82rem!important;margin-right:1.1rem!important;white-space:nowrap!important;color:var(--mco-dim)!important;text-decoration:none!important'],
+    ['& > nav.site a:hover', 'color:var(--mco-text)!important'],
+
+    // Story / author / chapter links become pills.
+    ['& > nav.story, & > nav.arrows', 'flex:0 0 auto!important;margin:0!important;padding:0!important;font-size:0!important;display:flex!important;gap:.5rem!important;flex-wrap:wrap!important'],
+    ['& > nav.story a, & > nav.story a:visited, & > nav.arrows a, & > nav.arrows a:visited', PILL],
+    ['& > nav.story a:hover, & > nav.arrows a:hover', 'border-color:var(--mco-brass)!important;color:var(--mco-text)!important'],
+
+    // Article: a column whose children are re-ordered visually (title first).
+    ['& > article#mcstories', 'flex:0 0 100%!important;display:flex!important;flex-direction:column!important;width:auto!important;max-width:none!important;' +
+          'float:none!important;margin:1.75rem 0 1.75rem!important;padding:0!important;border:0!important'],
+    ['& > article#mcstories > *', 'order:5'],
+    ['& > article#mcstories > h3.title', 'order:1;margin:0 0 .5rem!important;text-align:left!important;font:600 clamp(2rem,6vw,2.9rem)/1.08 ' + DISPLAY + '!important;letter-spacing:-.015em!important'],
+    ['& > article#mcstories > h3.byline', 'order:2;margin:0 0 1.1rem!important;text-align:left!important;font:400 1.05rem/1.4 ' + SERIF + '!important;color:var(--mco-dim)!important'],
+    ['& > article#mcstories > h3.byline .docAuthor', 'color:var(--mco-bright)!important;font-style:italic!important'],
+    // The archive's age notice: kept visible, shown as a small note under the byline.
+    ['& > article#mcstories > header', 'order:3;margin:0 0 .5rem!important;padding:0!important;align-self:flex-start!important'],
+    ['& > article#mcstories > header section.disclaimer', 'border:1px solid var(--mco-line)!important;border-radius:8px!important;padding:.55rem .85rem!important'],
+    ['& > article#mcstories > header section.disclaimer p', 'margin:0!important;font-size:.8rem!important;line-height:1.5!important;color:var(--mco-dim)!important'],
+    ['& > article#mcstories > header + .milestone', 'display:none!important'],
+    ['& > article#mcstories > h3.chapter', 'order:4;margin:1.25rem 0 1.4rem!important;padding-top:1.25rem!important;border-top:1px solid var(--mco-line)!important;text-align:left!important;' +
+          'font:500 .72rem/1.4 ' + MONO + '!important;letter-spacing:.2em!important;text-transform:uppercase!important;color:var(--mco-brass)!important'],
+
+    // The story text.
+    ['& > article#mcstories > section p', 'font-size:1.14rem!important;line-height:1.78!important;margin:0 0 1.2em!important;text-align:left!important;text-indent:0!important;text-wrap:pretty'],
+
+    // End marker and the author's afterword as a quiet card.
+    ['& > article#mcstories > .milestone', 'order:6;display:block!important;text-align:center!important;margin:2.25rem 0!important;font-size:1rem!important;letter-spacing:.6em!important;color:var(--mco-brass)!important'],
+    ['& > article#mcstories > footer', 'order:7;margin:0!important;padding:0!important;border:0!important'],
+    ['& > article#mcstories > footer section.afterword', 'background-color:var(--mco-ink2)!important;border:1px solid var(--mco-line)!important;border-radius:10px!important;padding:1.1rem 1.3rem .3rem!important'],
+    ['& > article#mcstories > footer section.afterword p', 'font-size:.95rem!important;line-height:1.65!important;margin:0 0 .9em!important;color:var(--mco-dim)!important'],
+
+    // Bottom of the page: same pills, then a muted site nav and hosting credit.
+    ['& > article#mcstories ~ nav.site', 'margin:1.25rem 0 .25rem!important;padding-top:1.25rem!important;border-top:1px solid var(--mco-line)!important'],
+    ['& > nav#blurb', 'flex:0 0 100%!important;text-align:center!important;margin:.25rem 0 0!important;padding:0!important;font:400 .72rem/1.5 ' + MONO + '!important;color:var(--mco-dim)!important;opacity:.7'],
+    ['& > nav#blurb a, & > nav#blurb a:visited', 'color:var(--mco-dim)!important;text-decoration-color:var(--mco-line)!important']
+  ];
+  var READER_CSS = READER_RULES.map(function (r) {
+    return r[0].split(',').map(function (s) { return s.trim().replace(/^&/, READER); }).join(',') + '{' + r[1] + '}';
+  }).join('\n');
+
   function installTheme() {
     if (!themeOn || document.getElementById('mco-theme')) return;
     var root = document.documentElement;
@@ -102,10 +165,10 @@
     pre.rel = 'preconnect'; pre.href = 'https://fonts.googleapis.com';
     var fonts = document.createElement('link');
     fonts.rel = 'stylesheet';
-    fonts.href = 'https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap';
+    fonts.href = 'https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap';
     var st = document.createElement('style');
     st.id = 'mco-theme';
-    st.textContent = THEME_CSS;
+    st.textContent = THEME_CSS + '\n' + READER_CSS;
     root.appendChild(pre); root.appendChild(fonts); root.appendChild(st);
   }
 
