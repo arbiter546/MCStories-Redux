@@ -22,7 +22,7 @@
   // ---- Settings -----------------------------------------------------------
   // Where the story metadata (authors, tags, synopses, word counts) lives.
   // Fetched once and cached; no story text is ever downloaded or stored.
-  var DATA_URL = "https://raw.githubusercontent.com/arbiter456/MCStories-Redux/main/stories.json";
+  var DATA_URL = "https://raw.githubusercontent.com/arbiter546/MCStories-Redux/refs/heads/main/stories.json";
   var CACHE_TTL_MS = 6 * 60 * 60 * 1000; // re-check every 6 hours
   var CACHE_KEY = 'mco.data.v1';
 
