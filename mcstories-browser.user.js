@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         MCStories Archive Browser
 // @namespace    https://github.com/your-name/mcstories-browser
-// @version      1.4.0
-// @description  Adds a searchable, filterable browser (tags, authors, word counts, bookmarks) over the MCStories archive, plus an optional dark reading theme.
+// @version      1.5.0
+// @description  Adds a searchable, filterable browser (tags, authors, word counts, bookmarks) over the MCStories archive, plus switchable reading themes.
 // @match        *://mcstories.com/*
 // @match        *://www.mcstories.com/*
 // @grant        GM_xmlhttpRequest
@@ -62,20 +62,41 @@
   }
 
 
-  // ---- Dark reading theme -------------------------------------------------
-  var THEME_KEY = 'mco.theme';
-  var themeOn = true;
-  try { themeOn = GM_getValue(THEME_KEY, 'on') !== 'off'; } catch (e) {}
+  // ---- Themes -------------------------------------------------------------
+  // Every palette fills the same CSS variables. "default" injects nothing at all,
+  // so the site looks exactly as it normally does.
+  var THEMES = {
+    dark:      { label: 'Dark',              scheme: 'dark',  ink: '#15120e', ink2: '#1d1912', line: '#3a3327', text: '#ede3cf', dim: '#c9bfa8', brass: '#a8823e', bright: '#d9b46a', glow: '#241d13', visited: '#b89a60' },
+    midnight:  { label: 'Midnight',          scheme: 'dark',  ink: '#0e1420', ink2: '#151d2d', line: '#27334b', text: '#dbe4f3', dim: '#9fb0c9', brass: '#4f7fd6', bright: '#8ab4ff', glow: '#16233a', visited: '#8fa6d1' },
+    black:     { label: 'Black',             scheme: 'dark',  ink: '#000000', ink2: '#0e0e0e', line: '#2a2a2a', text: '#e8e8e8', dim: '#a8a8a8', brass: '#808080', bright: '#ffffff', glow: '#0b0b0b', visited: '#bdbdbd' },
+    sepia:     { label: 'Sepia',             scheme: 'light', ink: '#f4ecd8', ink2: '#ebe0c6', line: '#d3c4a1', text: '#3b2f22', dim: '#6b5a45', brass: '#9a6b24', bright: '#7a4d12', glow: '#faf4e4', visited: '#8f6a3a' },
+    paper:     { label: 'Paper',             scheme: 'light', ink: '#fafaf7', ink2: '#f0f0ea', line: '#d9d9d0', text: '#222222', dim: '#555555', brass: '#7a7a7a', bright: '#2a5db0', glow: '#ffffff', visited: '#6a4c93' },
+    'default': { label: 'MCStories default', scheme: 'light', ink: '#ffffff', ink2: '#f2f2f2', line: '#cccccc', text: '#222222', dim: '#555555', brass: '#888888', bright: '#0645ad', glow: '#ffffff', visited: '#0645ad' }
+  };
+  var THEME_ORDER = ['dark', 'midnight', 'black', 'sepia', 'paper', 'default'];
+  var THEME_KEY = 'mco.themeName';
+  var current = 'dark';
+  try {
+    var saved = GM_getValue(THEME_KEY, null);
+    if (!saved) saved = GM_getValue('mco.theme', 'on') === 'off' ? 'default' : 'dark'; // older versions
+    if (THEMES[saved]) current = saved;
+  } catch (e) {}
+  var onThemeChange = null; // set by the switcher so it can re-colour itself
+
+  function themeVars(t) {
+    return ':root{--mco-ink:' + t.ink + ';--mco-ink2:' + t.ink2 + ';--mco-line:' + t.line + ';--mco-text:' + t.text +
+      ';--mco-dim:' + t.dim + ';--mco-brass:' + t.brass + ';--mco-bright:' + t.bright + ';--mco-glow:' + t.glow +
+      ';--mco-visited:' + t.visited + ';color-scheme:' + t.scheme + '}';
+  }
 
   var THEME_CSS = [
-    ':root{--mco-ink:#15120e;--mco-ink2:#1d1912;--mco-line:#3a3327;--mco-text:#ede3cf;--mco-dim:#c9bfa8;--mco-brass:#a8823e;--mco-bright:#d9b46a;color-scheme:dark}',
     'html{background:var(--mco-ink)!important}',
-    'body{background:radial-gradient(1200px 600px at 15% -10%,#241d13 0%,transparent 60%),var(--mco-ink)!important;' +
+    'body{background:radial-gradient(1200px 600px at 15% -10%,var(--mco-glow) 0%,transparent 60%),var(--mco-ink)!important;' +
       "color:var(--mco-text)!important;font-family:'Source Serif 4',Georgia,serif!important;font-size:1.125rem!important;" +
       'line-height:1.7!important;max-width:44rem!important;margin:0 auto!important;padding:2rem 1.25rem 5rem!important;box-sizing:border-box!important}',
     'body *{background-color:transparent!important;background-image:none!important;color:var(--mco-text)!important;border-color:var(--mco-line)!important;box-shadow:none!important}',
     'body a,body a *{color:var(--mco-bright)!important;text-decoration-color:var(--mco-brass)!important}',
-    'body a:visited,body a:visited *{color:#b89a60!important}',
+    'body a:visited,body a:visited *{color:var(--mco-visited)!important}',
     'body a:hover,body a:focus,body a:hover *{color:var(--mco-text)!important}',
     "body h1,body h2,body h3,body h4,body h5{font-family:'Fraunces',Georgia,serif!important;font-weight:600!important;line-height:1.2!important}",
     'body .byline,body .byline *{color:var(--mco-dim)!important;font-weight:400!important}',
@@ -120,7 +141,7 @@
       // Plain click opens the author sidebar; middle/ctrl/shift-click still use the real link.
       link.addEventListener('click', function (e) {
         if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        if (!openAuthorHook) return;
+        if (!openAuthorHook || current === 'default') return;
         e.preventDefault();
         openAuthorHook(name, href);
       });
@@ -184,8 +205,15 @@
     return r[0].split(',').map(function (s) { return s.trim().replace(/^&/, READER); }).join(',') + '{' + r[1] + '}';
   }).join('\n');
 
+  function removeTheme() {
+    ['mco-theme', 'mco-fonts', 'mco-fonts-pre'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+  }
+
   function installTheme() {
-    if (!themeOn || document.getElementById('mco-theme')) return;
+    if (current === 'default' || document.getElementById('mco-theme')) return;
     var root = document.documentElement;
     if (!root) {
       // Very early in page load the <html> element may not exist yet; wait for it.
@@ -196,19 +224,24 @@
       return;
     }
     var pre = document.createElement('link');
-    pre.rel = 'preconnect'; pre.href = 'https://fonts.googleapis.com';
+    pre.id = 'mco-fonts-pre'; pre.rel = 'preconnect'; pre.href = 'https://fonts.googleapis.com';
     var fonts = document.createElement('link');
-    fonts.rel = 'stylesheet';
+    fonts.id = 'mco-fonts'; fonts.rel = 'stylesheet';
     fonts.href = 'https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap';
     var st = document.createElement('style');
     st.id = 'mco-theme';
-    st.textContent = THEME_CSS + '\n' + READER_CSS;
+    st.textContent = themeVars(THEMES[current]) + '\n' + THEME_CSS + '\n' + READER_CSS;
     root.appendChild(pre); root.appendChild(fonts); root.appendChild(st);
   }
 
-  function toggleTheme() {
-    try { GM_setValue(THEME_KEY, themeOn ? 'off' : 'on'); } catch (e) {}
-    location.reload();
+  // Switch theme live (no reload) and remember the choice.
+  function applyTheme(name) {
+    if (!THEMES[name]) return;
+    current = name;
+    try { GM_setValue(THEME_KEY, name); } catch (e) {}
+    removeTheme();
+    installTheme();
+    if (onThemeChange) onThemeChange();
   }
 
   installTheme();
@@ -314,12 +347,95 @@
   launcher.style.cssText =
     'position:fixed!important;right:18px!important;bottom:18px!important;z-index:2147483646!important;padding:.55em 1.1em!important;' +
     'font:500 13px/1.2 ui-monospace,Menlo,Consolas,monospace!important;letter-spacing:.06em!important;' +
-    'color:#ede3cf!important;background:#1d1912!important;border:1px solid #a8823e!important;border-radius:999px!important;' +
+    'color:var(--mco-text,#ede3cf)!important;background:var(--mco-ink2,#1d1912)!important;border:1px solid var(--mco-brass,#a8823e)!important;border-radius:999px!important;' +
     'cursor:pointer!important;box-shadow:0 4px 14px rgba(0,0,0,.35)!important;margin:0!important;max-width:none!important;';
-  launcher.addEventListener('mouseenter', function () { launcher.style.borderColor = '#d9b46a'; });
-  launcher.addEventListener('mouseleave', function () { launcher.style.borderColor = '#a8823e'; });
+  launcher.addEventListener('mouseenter', function () { launcher.style.setProperty('border-color', 'var(--mco-bright,#d9b46a)', 'important'); });
+  launcher.addEventListener('mouseleave', function () { launcher.style.setProperty('border-color', 'var(--mco-brass,#a8823e)', 'important'); });
   launcher.addEventListener('click', open);
   document.body.appendChild(launcher);
+
+  // ---- Theme switcher (top right) -----------------------------------------
+  // Lives in a shadow root so neither the site's CSS nor the theme can restyle it.
+  var switcherHost = document.createElement('div');
+  switcherHost.id = 'mco-switcher';
+  switcherHost.style.cssText = 'position:fixed!important;top:14px!important;right:14px!important;z-index:2147483645!important;' +
+    'margin:0!important;padding:0!important;background:none!important;border:0!important;width:auto!important;height:auto!important;' +
+    'font-size:16px!important;line-height:1!important;max-width:none!important;';
+  var sroot = switcherHost.attachShadow({ mode: 'open' });
+  sroot.innerHTML =
+    '<style>' +
+    '*{box-sizing:border-box;font-family:ui-monospace,Menlo,Consolas,monospace}' +
+    '.btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;' +
+      'display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.25)}' +
+    '.btn:hover,.btn:focus-visible{border-color:var(--accent);outline:none}' +
+    '.menu{position:absolute;top:42px;right:0;min-width:236px;background:var(--bg);color:var(--fg);border:1px solid var(--line);' +
+      'border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.35);display:none}' +
+    '.menu.open{display:block}' +
+    '.title{font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);padding:.45rem .6rem .35rem}' +
+    '.item{display:flex;align-items:center;gap:.65rem;width:100%;padding:.5rem .6rem;border:0;border-radius:8px;background:none;' +
+      'color:var(--fg);font-size:.78rem;letter-spacing:.02em;cursor:pointer;text-align:left}' +
+    '.item:hover,.item:focus-visible{background:var(--hover);outline:none}' +
+    '.sw{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);position:relative;flex:none}' +
+    '.sw::after{content:"";position:absolute;right:3px;bottom:3px;width:9px;height:9px;border-radius:50%;background:var(--dot)}' +
+    '.check{margin-left:auto;opacity:0;color:var(--accent)}' +
+    '.item[aria-checked="true"] .check{opacity:1}' +
+    '.item span{white-space:nowrap}' +
+    '.sep{height:1px;background:var(--line);margin:4px 2px}' +
+    '</style>' +
+    '<button type="button" class="btn" aria-haspopup="menu" aria-expanded="false" aria-label="Change theme" title="Change theme">' +
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></button>' +
+    '<div class="menu" role="menu" aria-label="Theme"><div class="title">Theme</div></div>';
+  var sBtn = sroot.querySelector('.btn');
+  var sMenu = sroot.querySelector('.menu');
+
+  THEME_ORDER.forEach(function (key) {
+    var t = THEMES[key];
+    if (key === 'default') { var sep = document.createElement('div'); sep.className = 'sep'; sMenu.appendChild(sep); }
+    var item = document.createElement('button');
+    item.type = 'button'; item.className = 'item'; item.setAttribute('role', 'menuitemradio');
+    item.dataset.theme = key;
+    item.innerHTML = '<span class="sw" style="background:' + t.ink + ';--dot:' + t.bright + '"></span>' +
+      '<span>' + t.label + (key === 'dark' ? ' (default)' : '') + '</span><span class="check" aria-hidden="true">&#10003;</span>';
+    sMenu.appendChild(item);
+  });
+
+  function paintSwitcher() {
+    // Chrome follows the active theme; on the unstyled site it stays a neutral dark pill.
+    var t = current === 'default'
+      ? { ink2: '#1d1912', text: '#ede3cf', line: '#3a3327', bright: '#d9b46a' }
+      : THEMES[current];
+    switcherHost.style.setProperty('--bg', t.ink2);
+    switcherHost.style.setProperty('--fg', t.text);
+    switcherHost.style.setProperty('--line', t.line);
+    switcherHost.style.setProperty('--accent', t.bright);
+    switcherHost.style.setProperty('--hover', t.line);
+    Array.prototype.forEach.call(sMenu.querySelectorAll('.item'), function (it) {
+      it.setAttribute('aria-checked', it.dataset.theme === current ? 'true' : 'false');
+    });
+  }
+  onThemeChange = paintSwitcher;
+  paintSwitcher();
+
+  function setMenu(open) {
+    sMenu.classList.toggle('open', open);
+    sBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  sBtn.addEventListener('click', function () { setMenu(!sMenu.classList.contains('open')); });
+  sMenu.addEventListener('click', function (e) {
+    var item = e.target.closest ? e.target.closest('.item') : null;
+    if (!item) return;
+    applyTheme(item.dataset.theme);
+    setMenu(false);
+    sBtn.focus();
+  });
+  document.addEventListener('click', function (e) {
+    if (sMenu.classList.contains('open') && e.composedPath().indexOf(switcherHost) === -1) setMenu(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && sMenu.classList.contains('open')) { setMenu(false); sBtn.focus(); }
+  });
+  document.body.appendChild(switcherHost);
 
   window.addEventListener('message', function (e) {
     var d = e.data;
@@ -335,7 +451,7 @@
   if (typeof GM_registerMenuCommand === 'function') {
     GM_registerMenuCommand('Open archive browser', open);
     GM_registerMenuCommand('Refresh story data now', refresh);
-    GM_registerMenuCommand(themeOn ? 'Turn dark theme off (reloads page)' : 'Turn dark theme on (reloads page)', toggleTheme);
+    GM_registerMenuCommand('Change theme…', function () { setMenu(!sMenu.classList.contains('open')); });
   }
   }
 
