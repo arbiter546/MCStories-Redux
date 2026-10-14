@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('storyArchive.theme.v1');
+    if (t && /^(dark|midnight|black|sepia|paper)$/.test(t)) document.documentElement.setAttribute('data-theme', t);
+  } catch(e){}
+})();
+</script>
 <title>Browse Stories — The Erotic Mind-Control Story Archive</title>
 <meta name="description" content="Every story in the archive, one page, filterable by category and sortable by title, date, or length."/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,10 +30,44 @@
     --focus:#d9b46a;
     --line:#3a3327;
     --glow:#241d13;
+    --line-strong:#4a4130;
+    --danger-line:#7a2a2a;
+    --danger-text:#c98c8c;
+    --danger-line-hover:#a34848;
+    --danger-text-hover:#e0a3a3;
+    --shadow:rgba(0,0,0,.45);
+    --scheme:dark;
+  }
+
+  /* --- Themes: each block just swaps the variables above. Dark is the default. --- */
+  html[data-theme="midnight"]{
+    --ink:#0e1420; --ink-2:#151d2d; --ink-3:#1b2538; --ink-4:#243049;
+    --parchment:#dbe4f3; --parchment-dim:#9fb0c9; --brass:#4f7fd6; --brass-bright:#8ab4ff;
+    --muted:#7f8fab; --focus:#8ab4ff; --line:#27334b; --glow:#16233a; --line-strong:#34456a;
+    --danger-line:#8a3a3a; --danger-text:#d09a9a; --danger-line-hover:#b05555; --danger-text-hover:#e8b4b4;
+  }
+  html[data-theme="black"]{
+    --ink:#000000; --ink-2:#0e0e0e; --ink-3:#161616; --ink-4:#1f1f1f;
+    --parchment:#e8e8e8; --parchment-dim:#a8a8a8; --brass:#808080; --brass-bright:#ffffff;
+    --muted:#8a8a8a; --focus:#ffffff; --line:#2a2a2a; --glow:#0b0b0b; --line-strong:#3a3a3a;
+  }
+  html[data-theme="sepia"]{
+    --ink:#f4ecd8; --ink-2:#ebe0c6; --ink-3:#e3d6b8; --ink-4:#d9caa8;
+    --parchment:#3b2f22; --parchment-dim:#6b5a45; --brass:#9a6b24; --brass-bright:#7a4d12;
+    --muted:#857360; --focus:#7a4d12; --line:#d3c4a1; --glow:#faf4e4; --line-strong:#c4b28a;
+    --danger-line:#b5524a; --danger-text:#9c3b33; --danger-line-hover:#8f342d; --danger-text-hover:#7a2a24;
+    --shadow:rgba(70,45,10,.2); --scheme:light;
+  }
+  html[data-theme="paper"]{
+    --ink:#fafaf7; --ink-2:#f0f0ea; --ink-3:#e8e8e0; --ink-4:#dedbd2;
+    --parchment:#222222; --parchment-dim:#555555; --brass:#4a6fb0; --brass-bright:#2a5db0;
+    --muted:#77776f; --focus:#2a5db0; --line:#d9d9d0; --glow:#ffffff; --line-strong:#c4c4b8;
+    --danger-line:#b5524a; --danger-text:#9c3b33; --danger-line-hover:#8f342d; --danger-text-hover:#7a2a24;
+    --shadow:rgba(0,0,0,.16); --scheme:light;
   }
 
   *{ box-sizing:border-box; }
-  html{ background:var(--ink); color-scheme:dark; }
+  html{ background:var(--ink); color-scheme:var(--scheme); }
 
   /* Replace Chrome's default light scrollbars with slim themed ones. */
   *{ scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
@@ -63,7 +105,7 @@
     transition:margin-left .3s ease;
   }
 
-  header{ margin-bottom:1.5rem; }
+  header{ margin-bottom:1.5rem; position:relative; }
 
   .eyebrow{
     font-family:'IBM Plex Mono', monospace;
@@ -104,8 +146,8 @@
     width:300px;
     flex-shrink:0;
     position:sticky;
-    top:0;
-    max-height:100vh;
+    top:3.25rem;
+    max-height:calc(100vh - 3.25rem);
     overflow-y:auto;
     padding:1.25rem 0 2rem 1.25rem;
     border-left:1px solid var(--line);
@@ -136,17 +178,17 @@
     max-width:88vw;
     background:var(--ink-2);
     border-right:1px solid var(--line);
-    box-shadow:12px 0 28px rgba(0,0,0,.45);
+    box-shadow:none;
     z-index:60;
     transform:translateX(-100%);
-    transition:transform .3s ease;
+    transition:transform .3s ease, box-shadow .3s ease;
     overflow-y:auto;
     padding:1.5rem 1.35rem 2rem;
     display:flex;
     flex-direction:column;
     gap:1rem;
   }
-  .author-panel.open{ transform:translateX(0); }
+  .author-panel.open{ transform:translateX(0); box-shadow:12px 0 28px var(--shadow); }
 
   /* Push the whole page over to the opposite (right) edge of the screen
      rather than just nudging it — drop the centering max-width so .wrap
@@ -460,7 +502,7 @@
     border-radius:3px;
     background:var(--ink-2);
   }
-  .tag-group[open]{ border-color:#4a4130; }
+  .tag-group[open]{ border-color:var(--line-strong); }
 
   .tag-group summary{
     cursor:pointer;
@@ -532,12 +574,12 @@
   }
   .tag-chip.excluded{
     background:var(--ink);
-    border-color:#7a2a2a;
-    color:#c98c8c;
+    border-color:var(--danger-line);
+    color:var(--danger-text);
     text-decoration:line-through;
-    text-decoration-color:#7a2a2a;
+    text-decoration-color:var(--danger-line);
   }
-  .tag-chip.excluded:hover{ border-color:#a34848; color:#e0a3a3; }
+  .tag-chip.excluded:hover{ border-color:var(--danger-line-hover); color:var(--danger-text-hover); }
   .tag-chip .count{ opacity:.65; font-size:.9em; flex-shrink:0; }
   .tag-chip.active .count{ opacity:.75; }
   .tag-chip.excluded .count{ opacity:.6; }
@@ -699,7 +741,7 @@
     border:1px solid var(--line);
     border-top:none;
     border-radius:0 0 4px 4px;
-    box-shadow:0 4px 7px rgba(0,0,0,.4);
+    box-shadow:0 4px 7px var(--shadow);
     color:var(--muted);
     cursor:pointer;
     padding:0 0 .4rem;
@@ -726,7 +768,7 @@
     border:1px solid var(--line);
     border-top:none;
     border-radius:0 0 4px 4px;
-    box-shadow:0 3px 6px rgba(0,0,0,.4);
+    box-shadow:0 3px 6px var(--shadow);
     padding:0 0 .45rem;
     align-items:flex-end;
   }
@@ -761,10 +803,10 @@
   }
   .saved-toggle.excluded{
     background:var(--ink);
-    border-color:#7a2a2a;
-    color:#c98c8c;
+    border-color:var(--danger-line);
+    color:var(--danger-text);
   }
-  .saved-toggle.excluded:hover{ border-color:#a34848; color:#e0a3a3; }
+  .saved-toggle.excluded:hover{ border-color:var(--danger-line-hover); color:var(--danger-text-hover); }
 
   .row .dash, .author-story-item > .row-top .dash{
     color:var(--line);
@@ -1066,6 +1108,45 @@
     color:var(--muted);
     text-align:center;
   }
+
+  /* --- Theme switcher (top-right corner) --- */
+  /* Fixed to the corner of the screen. On narrow screens (where nothing is sticky) it goes back
+     to the top-right of the header and scrolls away with the page instead of covering content. */
+  .theme-switcher{ position:fixed; top:14px; right:14px; z-index:20; }
+  @media (max-width:900px){
+    header{ padding-right:2.9rem; }
+    .theme-switcher{ position:absolute; top:0; right:0; }
+  }
+  .theme-btn{
+    width:34px; height:34px; border-radius:50%;
+    border:1px solid var(--line); background:var(--ink-2); color:var(--parchment-dim);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .theme-btn:hover{ color:var(--parchment); border-color:var(--brass); }
+  .theme-menu{
+    position:absolute; top:calc(100% + 8px); right:0; min-width:236px;
+    background:var(--ink-2); border:1px solid var(--line); border-radius:12px;
+    padding:6px; box-shadow:0 12px 32px var(--shadow);
+  }
+  .theme-menu[hidden]{ display:none; }
+  .theme-menu-title{
+    font-family:'IBM Plex Mono', monospace; font-size:.64rem; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--brass); padding:.45rem .6rem .35rem;
+  }
+  .theme-item{
+    display:flex; align-items:center; gap:.65rem; width:100%;
+    padding:.5rem .6rem; border:0; border-radius:8px; background:none;
+    color:var(--parchment); font-family:'IBM Plex Mono', monospace; font-size:.78rem;
+    letter-spacing:.02em; cursor:pointer; text-align:left; white-space:nowrap;
+  }
+  .theme-item:hover{ background:var(--ink-3); }
+  .theme-swatch{ width:22px; height:22px; border-radius:50%; border:1px solid var(--line); position:relative; flex:none; }
+  .theme-swatch::after{
+    content:''; position:absolute; right:3px; bottom:3px; width:9px; height:9px;
+    border-radius:50%; background:var(--dot);
+  }
+  .theme-check{ margin-left:auto; opacity:0; color:var(--brass-bright); }
+  .theme-item[aria-checked="true"] .theme-check{ opacity:1; }
 </style>
 </head>
 <body>
@@ -1104,6 +1185,14 @@
 
 
   <header>
+    <div class="theme-switcher" id="theme-switcher">
+      <button type="button" class="theme-btn" id="theme-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Change theme" title="Change theme">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+      </button>
+      <div class="theme-menu" id="theme-menu" role="menu" aria-label="Theme" hidden>
+        <div class="theme-menu-title">Theme</div>
+      </div>
+    </div>
     <p class="eyebrow"><a class="back" href="https://mcstories.com/index.html" target="_blank" rel="noopener noreferrer">← The Archive</a></p>
     <h1 id="pagetitle">Browse every story</h1>
     <p class="subhead" id="totalcount"></p>
@@ -1239,116 +1328,105 @@
 </div>
 
 <script>
-// ---- Theme Switcher Integration (from Python/Userscript) ----
+// Theme switcher. The saved theme is applied in <head> before first paint; this wires up the menu.
 (function(){
-  var THEMES = {
-    dark:      { label: 'Dark',              scheme: 'dark',  ink: '#15120e', 'ink-2': '#1d1912', 'ink-3': '#242018', 'ink-4': '#2f2a20', line: '#3a3327', parchment: '#ede3cf', 'parchment-dim': '#c9bfa8', brass: '#a8823e', 'brass-bright': '#d9b46a', muted: '#9c948a', focus: '#d9b46a', glow: '#241d13' },
-    midnight:  { label: 'Midnight',          scheme: 'dark',  ink: '#0e1420', 'ink-2': '#151d2d', 'ink-3': '#1c263b', 'ink-4': '#25324c', line: '#27334b', parchment: '#dbe4f3', 'parchment-dim': '#9fb0c9', brass: '#4f7fd6', 'brass-bright': '#8ab4ff', muted: '#8fa6d1', focus: '#8ab4ff', glow: '#16233a' },
-    black:     { label: 'Black',             scheme: 'dark',  ink: '#000000', 'ink-2': '#0e0e0e', 'ink-3': '#161616', 'ink-4': '#222222', line: '#2a2a2a', parchment: '#e8e8e8', 'parchment-dim': '#a8a8a8', brass: '#808080', 'brass-bright': '#ffffff', muted: '#888888', focus: '#ffffff', glow: '#0b0b0b' },
-    sepia:     { label: 'Sepia',             scheme: 'light', ink: '#f4ecd8', 'ink-2': '#ebe0c6', 'ink-3': '#dfd2b2', 'ink-4': '#d0c19e', line: '#d3c4a1', parchment: '#3b2f22', 'parchment-dim': '#6b5a45', brass: '#9a6b24', 'brass-bright': '#7a4d12', muted: '#8a7960', focus: '#9a6b24', glow: '#faf4e4' },
-    paper:     { label: 'Paper',             scheme: 'light', ink: '#fafaf7', 'ink-2': '#f0f0ea', 'ink-3': '#e6e6de', 'ink-4': '#dcdcd2', line: '#d9d9d0', parchment: '#222222', 'parchment-dim': '#555555', brass: '#7a7a7a', 'brass-bright': '#2a5db0', muted: '#777777', focus: '#2a5db0', glow: '#ffffff' },
-    'default': { label: 'MCStories default', scheme: 'light', ink: '#ffffff', 'ink-2': '#f2f2f2', 'ink-3': '#e6e6e6', 'ink-4': '#d9d9d9', line: '#cccccc', parchment: '#222222', 'parchment-dim': '#555555', brass: '#888888', 'brass-bright': '#0645ad', muted: '#777777', focus: '#0645ad', glow: '#ffffff' }
-  };
-  var THEME_ORDER = ['dark', 'midnight', 'black', 'sepia', 'paper', 'default'];
-  var THEME_KEY = 'mco.themeName';
+  var KEY = 'storyArchive.theme.v1';
+  var THEMES = [
+    {id:'dark',     label:'Dark (default)', ink:'#15120e', dot:'#d9b46a'},
+    {id:'midnight', label:'Midnight',       ink:'#0e1420', dot:'#8ab4ff'},
+    {id:'black',    label:'Black',          ink:'#000000', dot:'#ffffff'},
+    {id:'sepia',    label:'Sepia',          ink:'#f4ecd8', dot:'#7a4d12'},
+    {id:'paper',    label:'Paper',          ink:'#fafaf7', dot:'#2a5db0'}
+  ];
+  var root = document.documentElement;
+  var switcher = document.getElementById('theme-switcher');
+  var btn = document.getElementById('theme-btn');
+  var menu = document.getElementById('theme-menu');
+  if (!switcher || !btn || !menu) return;
 
-  function applyTheme(name) {
-    if (!THEMES[name]) name = 'dark';
-    try { localStorage.setItem(THEME_KEY, name); } catch(e){}
-    var t = THEMES[name];
-    var root = document.documentElement;
-    root.style.colorScheme = t.scheme;
-    Object.keys(t).forEach(function(k){
-      if (k === 'label' || k === 'scheme') return;
-      root.style.setProperty('--' + k, t[k]);
+  function known(id){ return THEMES.some(function(t){ return t.id === id; }); }
+  function current(){ var id = root.getAttribute('data-theme'); return known(id) ? id : 'dark'; }
+
+  THEMES.forEach(function(t){
+    var item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'theme-item';
+    item.setAttribute('role', 'menuitemradio');
+    item.dataset.theme = t.id;
+    var sw = document.createElement('span');
+    sw.className = 'theme-swatch';
+    sw.style.background = t.ink;
+    sw.style.setProperty('--dot', t.dot);
+    var lab = document.createElement('span');
+    lab.textContent = t.label;
+    var chk = document.createElement('span');
+    chk.className = 'theme-check';
+    chk.setAttribute('aria-hidden', 'true');
+    chk.innerHTML = '&#10003;';
+    item.appendChild(sw); item.appendChild(lab); item.appendChild(chk);
+    menu.appendChild(item);
+  });
+
+  function mark(){
+    var cur = current();
+    menu.querySelectorAll('.theme-item').forEach(function(it){
+      it.setAttribute('aria-checked', it.dataset.theme === cur ? 'true' : 'false');
     });
-    var switcher = document.getElementById('mco-switcher');
-    if (switcher && switcher.shadowRoot) {
-      Array.prototype.forEach.call(switcher.shadowRoot.querySelectorAll('.item'), function(it){
-        it.setAttribute('aria-checked', it.dataset.theme === name ? 'true' : 'false');
-      });
-      var bgT = name === 'default' ? THEMES.dark : t;
-      switcher.style.setProperty('--bg', bgT['ink-2']);
-      switcher.style.setProperty('--fg', bgT.parchment);
-      switcher.style.setProperty('--line', bgT.line);
-      switcher.style.setProperty('--accent', bgT['brass-bright']);
-      switcher.style.setProperty('--hover', bgT.line);
+  }
+
+  // silent = the change came from the host page (userscript), so don't echo it back.
+  function setTheme(id, silent){
+    if (!known(id)) return;
+    root.setAttribute('data-theme', id);
+    try { localStorage.setItem(KEY, id); } catch(e){}
+    if (!silent && window.parent !== window) {
+      try { window.parent.postMessage({mco:'theme', id:id}, '*'); } catch(e){}
+    }
+    mark();
+  }
+
+  function setMenu(open){
+    menu.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      var checked = menu.querySelector('.theme-item[aria-checked="true"]');
+      if (checked) checked.focus();
     }
   }
 
-  var initialTheme = 'dark';
-  try {
-    var saved = localStorage.getItem(THEME_KEY);
-    if (saved && THEMES[saved]) initialTheme = saved;
-  } catch(e){}
-  applyTheme(initialTheme);
-
-  var switcherHost = document.createElement('div');
-  switcherHost.id = 'mco-switcher';
-  switcherHost.style.cssText = 'position:fixed!important;top:14px!important;right:14px!important;z-index:2147483645!important;' +
-    'margin:0!important;padding:0!important;background:none!important;border:0!important;width:auto!important;height:auto!important;' +
-    'font-size:16px!important;line-height:1!important;max-width:none!important;';
-  var sroot = switcherHost.attachShadow({ mode: 'open' });
-  sroot.innerHTML =
-    '<style>' +
-    '*{box-sizing:border-box;font-family:ui-monospace,Menlo,Consolas,monospace}' +
-    '.btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;' +
-      'display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.25)}' +
-    '.btn:hover,.btn:focus-visible{border-color:var(--accent);outline:none}' +
-    '.menu{position:absolute;top:42px;right:0;min-width:236px;background:var(--bg);color:var(--fg);border:1px solid var(--line);' +
-      'border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.35);display:none}' +
-    '.menu.open{display:block}' +
-    '.title{font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);padding:.45rem .6rem .35rem}' +
-    '.item{display:flex;align-items:center;gap:.65rem;width:100%;padding:.5rem .6rem;border:0;border-radius:8px;background:none;' +
-      'color:var(--fg);font-size:.78rem;letter-spacing:.02em;cursor:pointer;text-align:left}' +
-    '.item:hover,.item:focus-visible{background:var(--hover);outline:none}' +
-    '.sw{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);position:relative;flex:none}' +
-    '.sw::after{content:"";position:absolute;right:3px;bottom:3px;width:9px;height:9px;border-radius:50%;background:var(--dot)}' +
-    '.check{margin-left:auto;opacity:0;color:var(--accent)}' +
-    '.item[aria-checked="true"] .check{opacity:1}' +
-    '.item span{white-space:nowrap}' +
-    '.sep{height:1px;background:var(--line);margin:4px 2px}' +
-    '</style>' +
-    '<button type="button" class="btn" aria-haspopup="menu" aria-expanded="false" aria-label="Change theme" title="Change theme">' +
-      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">' +
-      '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></button>' +
-    '<div class="menu" role="menu" aria-label="Theme"><div class="title">Theme</div></div>';
-  var sBtn = sroot.querySelector('.btn');
-  var sMenu = sroot.querySelector('.menu');
-
-  THEME_ORDER.forEach(function (key) {
-    var t = THEMES[key];
-    if (key === 'default') { var sep = document.createElement('div'); sep.className = 'sep'; sMenu.appendChild(sep); }
-    var item = document.createElement('button');
-    item.type = 'button'; item.className = 'item'; item.setAttribute('role', 'menuitemradio');
-    item.dataset.theme = key;
-    item.innerHTML = '<span class="sw" style="background:' + t.ink + ';--dot:' + t['brass-bright'] + '"></span>' +
-      '<span>' + t.label + (key === 'dark' ? ' (default)' : '') + '</span><span class="check" aria-hidden="true">&#10003;</span>';
-    sMenu.appendChild(item);
-  });
-
-  function setMenu(open) {
-    sMenu.classList.toggle('open', open);
-    sBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  }
-  sBtn.addEventListener('click', function () { setMenu(!sMenu.classList.contains('open')); });
-  sMenu.addEventListener('click', function (e) {
-    var item = e.target.closest ? e.target.closest('.item') : null;
+  btn.addEventListener('click', function(){ setMenu(menu.hidden); });
+  menu.addEventListener('click', function(e){
+    var item = e.target.closest('.theme-item');
     if (!item) return;
-    applyTheme(item.dataset.theme);
+    setTheme(item.dataset.theme, false);
     setMenu(false);
-    sBtn.focus();
+    btn.focus();
   });
-  document.addEventListener('click', function (e) {
-    if (sMenu.classList.contains('open') && e.composedPath().indexOf(switcherHost) === -1) setMenu(false);
+  document.addEventListener('click', function(e){
+    if (!menu.hidden && !switcher.contains(e.target)) setMenu(false);
   });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && sMenu.classList.contains('open')) { setMenu(false); sBtn.focus(); }
+  document.addEventListener('keydown', function(e){
+    if (menu.hidden) return;
+    if (e.key === 'Escape') { setMenu(false); btn.focus(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      var items = Array.prototype.slice.call(menu.querySelectorAll('.theme-item'));
+      var i = items.indexOf(document.activeElement);
+      i = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+      items[i].focus();
+      e.preventDefault();
+    }
   });
-  document.body.appendChild(switcherHost);
-  applyTheme(initialTheme);
-})();
+  // The userscript host page can push its theme into this page when it is shown as an overlay.
+  window.addEventListener('message', function(e){
+    var d = e.data;
+    if (d && d.mco === 'theme') setTheme(d.id, true);
+  });
 
+  mark();
+})();
+</script>
+
+<script>
 (function(){
   var resultsEl = document.getElementById('results');
 
