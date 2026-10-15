@@ -473,7 +473,7 @@
 
   /* --- Sidebar: match toggle --- */
   .sidebar-top{
-    margin-bottom:1rem;
+    margin-bottom:.35rem;
     /* Nudges the Match toggle down to line up with the Stories/Authors
        toggle, which sits vertically centered against the taller search
        input in its row rather than flush with the top padding. */
@@ -670,6 +670,15 @@
     padding:.4rem 0;
   }
   .clear-link:hover{ color:var(--parchment); }
+  /* Permanently reserved row so showing/hiding the button never shifts layout. */
+  .clear-row{
+    height:1.9rem;
+    margin-bottom:.4rem;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+  }
+  .clear-row .clear-link{ padding:.2rem 0; }
 
   /* Search-scope toggle: same segmented look and size as Stories/Authors.
      Each button is given the same fixed width those two buttons end up with
@@ -1213,7 +1222,6 @@
             <button type="button" id="view-authors">Authors</button>
           </div>
           <button type="button" id="saved-toggle" class="saved-toggle" aria-pressed="false"><span class="saved-toggle-icon"></span><span class="saved-toggle-label"></span></button>
-          <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
         </div>
       </div>
 
@@ -1234,6 +1242,9 @@
             <button type="button" id="mode-or">Any tag</button>
           </div>
         </div>
+      </div>
+      <div class="clear-row">
+        <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
       </div>
 
       <div class="tag-groups" id="sortgroups">
@@ -1276,7 +1287,7 @@
         </details>
 
         <details class="tag-group sort-dd" data-field="added" open>
-          <summary><span class="summary-label" data-stories-label="Sort: Date Added" data-authors-label="Sort: Latest Story Added">Sort: Date Added</span>
+          <summary><span class="summary-label" data-stories-label="Sort: Date Added" data-authors-label="Sort: Latest Added">Sort: Date Added</span>
             <span class="summary-right">
               <span class="group-badge sort-badge" data-field="added"></span>
               <span class="chevron">▸</span>
@@ -1298,7 +1309,7 @@
         </details>
 
         <details class="tag-group sort-dd" data-field="updated">
-          <summary><span class="summary-label" data-stories-label="Sort: Date Updated" data-authors-label="Sort: Latest Story Updated">Sort: Date Updated</span>
+          <summary><span class="summary-label" data-stories-label="Sort: Date Updated" data-authors-label="Sort: Latest Updated">Sort: Date Updated</span>
             <span class="summary-right">
               <span class="group-badge sort-badge" data-field="updated"></span>
               <span class="chevron">▸</span>
@@ -2910,7 +2921,7 @@
     var active = activeTags();
     var excluded = excludedTags();
     var rangesActive = wordFilter.active || addedFilter.active || updatedFilter.active;
-    clearBtn.hidden = active.length === 0 && excluded.length === 0 && !searchInput.value.trim() && !rangesActive;
+    clearBtn.hidden = active.length === 0 && excluded.length === 0 && !rangesActive;
   }
 
   var debounceTimer;
