@@ -539,6 +539,8 @@
     font-size:.7rem;
   }
   .tag-group[open] .chevron{ transform:rotate(90deg); }
+  .tag-group.closing .chevron{ transform:none; }
+  .tag-group.closing{ border-color:var(--line); }
 
   .tag-group .tag-row{
     display:flex;
@@ -676,7 +678,7 @@
     margin-bottom:.4rem;
     display:flex;
     align-items:center;
-    justify-content:flex-start;
+    justify-content:flex-end;
   }
   .clear-row .clear-link{ padding:.2rem 0; }
 
@@ -1234,6 +1236,9 @@
     </div>
 
     <aside class="sidebar">
+      <div class="clear-row">
+        <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
+      </div>
       <div class="sidebar-top">
         <div class="sort-group">
           <span>Match</span>
@@ -1242,9 +1247,6 @@
             <button type="button" id="mode-or">Any tag</button>
           </div>
         </div>
-      </div>
-      <div class="clear-row">
-        <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
       </div>
 
       <div class="tag-groups" id="sortgroups">
@@ -1443,7 +1445,7 @@
 
   resultsEl.innerHTML = '<div class="empty-state" id="loadingstate">Loading stories…</div>';
 
-  fetch('stories.json')
+  fetch('stories.json', {cache: 'no-cache'})
     .then(function(r){
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
@@ -2032,6 +2034,57 @@
 
   var sortDirLabels = { desc: '↓ High → Low', asc: '↑ Low → High' };
 
+  // Accordion with animated open/close: opening one dropdown slides any
+  // other open one in the same set shut. Animates the content's height
+  // instead of letting <details> snap instantly.
+  var ACCORDION_MS = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 320;
+  var ACCORDION_EASE = 'cubic-bezier(.4,0,.2,1)';
+
+  function makeAccordion(items, contentSelector){
+    items = Array.prototype.slice.call(items);
+
+    function isOpen(dd){ return dd.open && !dd.classList.contains('closing'); }
+
+    function animate(dd, opening){
+      var c = dd.querySelector(contentSelector);
+      if (dd._anim){ dd._anim.cancel(); dd._anim = null; }
+      c.style.overflow = 'hidden';
+      if (opening){
+        dd.classList.remove('closing');
+        dd.open = true;
+      } else {
+        dd.classList.add('closing');
+      }
+      var cs = getComputedStyle(c);
+      var full = {height:c.offsetHeight+'px', paddingTop:cs.paddingTop, paddingBottom:cs.paddingBottom, borderTopWidth:cs.borderTopWidth, opacity:1};
+      var none = {height:'0px', paddingTop:'0px', paddingBottom:'0px', borderTopWidth:'0px', opacity:0};
+      var anim = c.animate(opening ? [none, full] : [full, none], {duration:ACCORDION_MS, easing:ACCORDION_EASE});
+      dd._anim = anim;
+      anim.onfinish = function(){
+        dd._anim = null;
+        c.style.overflow = '';
+        if (!opening){ dd.open = false; dd.classList.remove('closing'); }
+      };
+    }
+
+    items.forEach(function(dd){
+      dd.querySelector('summary').addEventListener('click', function(e){
+        e.preventDefault();
+        if (isOpen(dd)){
+          animate(dd, false);
+          return;
+        }
+        items.forEach(function(other){
+          if (other !== dd && isOpen(other)) animate(other, false);
+        });
+        animate(dd, true);
+      });
+    });
+  }
+
+  makeAccordion(document.querySelectorAll('.sort-dd'), '.sort-content');
+  makeAccordion(document.querySelectorAll('#taggroups > .tag-group'), '.tag-row');
+
   function updateSortUI(){
     document.querySelectorAll('.dir-toggle').forEach(function(toggle){
       var field = toggle.dataset.field;
@@ -2078,7 +2131,7 @@
 
   function toDays(iso){
     if (!iso) return null;
-    var t = Date.parse(iso + 'T00:00:00Z');
+    var t = Date.parse(String(iso).slice(0, 10) + 'T00:00:00Z');
     if (isNaN(t)) return null;
     return Math.floor(t / 86400000);
   }
