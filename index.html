@@ -7,8 +7,9 @@
 (function(){
   try {
     var t = localStorage.getItem('storyArchive.theme.v1');
-    if (t && /^(dark|midnight|black|sepia|paper)$/.test(t)) document.documentElement.setAttribute('data-theme', t);
-  } catch(e){}
+    if (!(t && /^(dark|midnight|black|sepia|paper)$/.test(t))) t = 'paper';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch(e){ document.documentElement.setAttribute('data-theme', 'paper'); }
 })();
 </script>
 <title>Browse Stories — The Erotic Mind-Control Story Archive</title>
@@ -39,7 +40,7 @@
     --scheme:dark;
   }
 
-  /* --- Themes: each block just swaps the variables above. Dark is the default. --- */
+  /* --- Themes: each block just swaps the variables above. Paper is the default (set in <head> script). --- */
   html[data-theme="midnight"]{
     --ink:#0e1420; --ink-2:#151d2d; --ink-3:#1b2538; --ink-4:#243049;
     --parchment:#dbe4f3; --parchment-dim:#9fb0c9; --brass:#4f7fd6; --brass-bright:#8ab4ff;
@@ -1134,6 +1135,21 @@
     cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
   }
   .theme-btn:hover{ color:var(--parchment); border-color:var(--brass); }
+  /* --- Page "back to top" button: sits just left of the theme button and fades in once the
+     page has scrolled down. Fixed, so on narrow screens (where the theme button scrolls away
+     with the header) it takes the top-right corner instead. --- */
+  .page-totop{
+    position:fixed; top:14px; right:56px; z-index:20;
+    width:34px; height:34px; border-radius:50%;
+    border:1px solid var(--line); background:var(--ink-2); color:var(--parchment-dim);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; line-height:0;
+    opacity:0; transform:translateY(-4px); pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease, color .15s ease, border-color .15s ease;
+  }
+  .page-totop.show{ opacity:1; transform:none; pointer-events:auto; }
+  .page-totop:hover{ color:var(--parchment); border-color:var(--brass); }
+  @media (max-width:900px){ .page-totop{ right:14px; } }
+  @media (prefers-reduced-motion:reduce){ .page-totop{ transition:none; } }
   .theme-menu{
     position:absolute; top:calc(100% + 8px); right:0; min-width:236px;
     background:var(--ink-2); border:1px solid var(--line); border-radius:12px;
@@ -1191,6 +1207,10 @@
   </div>
   <div class="author-panel-list" id="author-panel-list"></div>
 </aside>
+
+<button type="button" class="page-totop" id="page-totop" aria-label="Scroll to top" title="Scroll to top" tabindex="-1">
+  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+</button>
 
 <div class="wrap">
 
@@ -1345,11 +1365,11 @@
 (function(){
   var KEY = 'storyArchive.theme.v1';
   var THEMES = [
-    {id:'dark',     label:'Dark (default)', ink:'#15120e', dot:'#d9b46a'},
-    {id:'midnight', label:'Midnight',       ink:'#0e1420', dot:'#8ab4ff'},
-    {id:'black',    label:'Black',          ink:'#000000', dot:'#ffffff'},
-    {id:'sepia',    label:'Sepia',          ink:'#f4ecd8', dot:'#7a4d12'},
-    {id:'paper',    label:'Paper',          ink:'#fafaf7', dot:'#2a5db0'}
+    {id:'paper',    label:'Paper (default)', ink:'#fafaf7', dot:'#2a5db0'},
+    {id:'sepia',    label:'Sepia',           ink:'#f4ecd8', dot:'#7a4d12'},
+    {id:'dark',     label:'Dark',            ink:'#15120e', dot:'#d9b46a'},
+    {id:'midnight', label:'Midnight',        ink:'#0e1420', dot:'#8ab4ff'},
+    {id:'black',    label:'Black',           ink:'#000000', dot:'#ffffff'}
   ];
   var root = document.documentElement;
   var switcher = document.getElementById('theme-switcher');
@@ -1358,7 +1378,7 @@
   if (!switcher || !btn || !menu) return;
 
   function known(id){ return THEMES.some(function(t){ return t.id === id; }); }
-  function current(){ var id = root.getAttribute('data-theme'); return known(id) ? id : 'dark'; }
+  function current(){ var id = root.getAttribute('data-theme'); return known(id) ? id : 'paper'; }
 
   THEMES.forEach(function(t){
     var item = document.createElement('button');
@@ -1901,7 +1921,7 @@
       });
     }
     authorPanelListEl.innerHTML = authored.map(function(s){
-      return storyItemHtml(s, authorPanelExpandedSet.has(s.href));
+      return storyItemHtml(s, authorPanelExpandedSet.has(s.href), true);
     }).join('');
   }
 
@@ -2631,10 +2651,8 @@
         var updated = fmtDate(s.date_updated);
         if (updated) bits.push('Updated ' + updated);
         else if (added) bits.push('Added ' + added);
-        var chapCount = s.chapters ? s.chapters.length : 0;
-        bits.push(chapCount + (chapCount === 1 ? ' chapter' : ' chapters'));
         bits.push(s.words.toLocaleString() + ' words');
-        // Each detail is a no-wrap unit so "7 chapters" never splits; the
+        // Each detail is a no-wrap unit so it never splits; the
         // <wbr> after each dot is the only place the line may break.
         metaHtml = bits.map(function(b){ return '<span class="nowrap">' + b + '</span>'; })
                        .join('<span class="sep">\u00b7</span><wbr>');
@@ -2686,12 +2704,12 @@
   // Renders one expandable story entry used both in the full Authors view
   // and the author mini-panel, so expanding a story shows the same
   // synopsis, tags, and chapter list in either place.
-  function storyItemHtml(s, isItemExpanded){
+  function storyItemHtml(s, isItemExpanded, hideChapterCount){
     // Line 1: date added · date updated. Line 2: chapter count · word count. Each line
     // is its own block with no-wrap pieces so "1 chapter" never splits.
     var addedStr = fmtDate(s.date_added);
     var chapCount = s.chapters ? s.chapters.length : 0;
-    var line2Bits = [chapCount + (chapCount === 1 ? ' chapter' : ' chapters')];
+    var line2Bits = hideChapterCount ? [] : [chapCount + (chapCount === 1 ? ' chapter' : ' chapters')];
     if ('words' in s) line2Bits.push(s.words.toLocaleString() + ' words');
     var metaHtml = '';
     var updatedStr = fmtDate(s.date_updated);
@@ -2999,6 +3017,29 @@
 
   render();
   } // end init()
+})();
+</script>
+<script>
+// Page-level "back to top" button (left of the theme button), shown once the page is scrolled down.
+(function(){
+  var btn = document.getElementById('page-totop');
+  if (!btn) return;
+  var THRESHOLD = 400;
+  var ticking = false;
+  function update(){
+    ticking = false;
+    var on = (window.pageYOffset || document.documentElement.scrollTop || 0) > THRESHOLD;
+    btn.classList.toggle('show', on);
+    btn.tabIndex = on ? 0 : -1;
+  }
+  window.addEventListener('scroll', function(){
+    if (!ticking){ ticking = true; window.requestAnimationFrame(update); }
+  }, {passive:true});
+  btn.addEventListener('click', function(){
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'});
+  });
+  update();
 })();
 </script>
 </body>
