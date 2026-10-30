@@ -19,6 +19,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
+    /* Author panel width: at least 380px, but grows to fill whatever viewport width the
+       1280px page doesn't need, so the page stays full-size and just slides right. */
+    --author-panel-w:max(380px, calc(100vw - 1280px));
     --ink:#15120e;
     --ink-2:#1d1912;
     --ink-3:#242018;
@@ -175,7 +178,7 @@
   .author-panel{
     position:fixed;
     top:0; left:0; bottom:0;
-    width:380px;
+    width:var(--author-panel-w);
     max-width:88vw;
     background:var(--ink-2);
     border-right:1px solid var(--line);
@@ -191,10 +194,10 @@
   }
   .author-panel.open{ transform:translateX(0); box-shadow:12px 0 28px var(--shadow); }
 
-  /* Push the whole page over to the opposite (right) edge of the screen
-     rather than just nudging it — drop the centering max-width so .wrap
-     fills all the way from the panel to the right side of the viewport. */
-  body.author-panel-open .wrap{ margin-left:380px; margin-right:0; max-width:none; }
+  /* Slide the page over so it sits flush against the panel (and the right edge). It keeps
+     its normal max-width, so it moves into the right-hand whitespace instead of stretching;
+     the panel absorbs the freed-up space. On narrower screens it simply shrinks to fit. */
+  body.author-panel-open .wrap{ margin-left:var(--author-panel-w); margin-right:0; }
 
   /* Header + sort buttons stay pinned to the top of the panel while the
      story list scrolls underneath. Negative margins cancel the panel's own
