@@ -477,11 +477,16 @@
 
   /* --- Sidebar: match toggle --- */
   .sidebar-top{
-    margin-bottom:.35rem;
-    /* Nudges the Match toggle down to line up with the Stories/Authors
-       toggle, which sits vertically centered against the taller search
-       input in its row rather than flush with the top padding. */
-    margin-top:.35rem;
+    /* Match toggle is the first thing in the sidebar. The small top margin
+       lines its top edge up with the Stories/Authors toggle, which is
+       vertically centered against the taller search input in its row. */
+    margin-top:.275rem;
+    /* Dividing line under the Match section. The extra .275rem cancels the
+       top margin above, so this line lands on the same level as the rule
+       under the search row in the main column. */
+    padding-bottom:1.275rem;
+    margin-bottom:0;
+    border-bottom:1px solid var(--line);
   }
   .sidebar-top .sort-group{ justify-content:space-between; width:100%; }
 
@@ -677,14 +682,16 @@
   }
   .clear-link:hover{ color:var(--parchment); }
   /* Permanently reserved row so showing/hiding the button never shifts layout. */
+  /* Its height equals the gap between the main column's rule and the first
+     story (1.5rem), so the sort/filter list starts level with that story. */
   .clear-row{
-    height:1.9rem;
-    margin-bottom:.4rem;
+    height:1.5rem;
+    margin-bottom:0;
     display:flex;
     align-items:center;
     justify-content:flex-end;
   }
-  .clear-row .clear-link{ padding:.2rem 0; }
+  .clear-row .clear-link{ padding:.1rem 0; line-height:1.2; }
 
   /* Search-scope toggle: same segmented look and size as Stories/Authors.
      Each button is given the same fixed width those two buttons end up with
@@ -1259,9 +1266,6 @@
     </div>
 
     <aside class="sidebar">
-      <div class="clear-row">
-        <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
-      </div>
       <div class="sidebar-top">
         <div class="sort-group">
           <span>Match</span>
@@ -1270,6 +1274,9 @@
             <button type="button" id="mode-or">Any tag</button>
           </div>
         </div>
+      </div>
+      <div class="clear-row">
+        <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
       </div>
 
       <div class="tag-groups" id="sortgroups">
