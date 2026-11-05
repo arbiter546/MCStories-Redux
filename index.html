@@ -1501,6 +1501,11 @@
   }
   var BASE_URL = 'https://mcstories.com/';
   function storyUrl(href){ return BASE_URL + href; }
+  // "Read story" goes straight to chapter 1 when the story has chapters;
+  // otherwise it falls back to the story's own page.
+  function readStoryUrl(s){
+    return storyUrl((s.chapters && s.chapters.length && s.chapters[0].href) ? s.chapters[0].href : s.href);
+  }
   var bookmarks = loadBookmarks(BOOKMARK_KEY);
   var authorBookmarks = loadBookmarks(AUTHOR_BOOKMARK_KEY);
   function saveBookmarks(){
@@ -2671,7 +2676,7 @@
         if (s.tags && s.tags.length){
           synopsisHtml += '<div class="expanded-tags">' + s.tags.map(tagButtonHtml).join('') + '</div>';
         }
-        synopsisHtml += '<a class="read-story-btn" href="' + storyUrl(s.href) + '" target="_blank" rel="noopener noreferrer">Read story \u2192</a>';
+        synopsisHtml += '<a class="read-story-btn" href="' + readStoryUrl(s) + '" target="_blank" rel="noopener noreferrer">Read story \u2192</a>';
         if (s.chapters && s.chapters.length){
           synopsisHtml += '<div class="author-stories">' + s.chapters.map(function(ch){
             return '<a class="author-story-item chapter-link" href="' + storyUrl(ch.href) + '" target="_blank" rel="noopener noreferrer">' +
@@ -2743,7 +2748,7 @@
           '</a>';
         }).join('') + '</div>';
       }
-      extra = synHtml + tagsHtml + '<a class="read-story-btn" href="' + storyUrl(s.href) + '" target="_blank" rel="noopener noreferrer">Read story \u2192</a>' + chaptersHtml;
+      extra = synHtml + tagsHtml + '<a class="read-story-btn" href="' + readStoryUrl(s) + '" target="_blank" rel="noopener noreferrer">Read story \u2192</a>' + chaptersHtml;
     }
     var headHtml = '<div class="row-top">' +
       '<span class="name">' + escapeHtml(s.title) + '</span>' +
