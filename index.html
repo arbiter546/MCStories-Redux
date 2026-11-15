@@ -1,0 +1,3061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('storyArchive.theme.v1');
+    if (!(t && /^(dark|midnight|black|sepia|paper)$/.test(t))) t = 'paper';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch(e){ document.documentElement.setAttribute('data-theme', 'paper'); }
+})();
+</script>
+<title>Browse Stories — The Erotic Mind-Control Story Archive</title>
+<meta name="description" content="Every story in the archive, one page, filterable by category and sortable by title, date, or length."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Author panel width: at least 380px, but grows to fill whatever viewport width the
+       1280px page doesn't need, so the page stays full-size and just slides right. */
+    --author-panel-w:max(380px, calc(100vw - 1280px));
+    --ink:#15120e;
+    --ink-2:#1d1912;
+    --ink-3:#242018;
+    --ink-4:#2f2a20;
+    --parchment:#ede3cf;
+    --parchment-dim:#c9bfa8;
+    --brass:#a8823e;
+    --brass-bright:#d9b46a;
+    --muted:#9c948a;
+    --focus:#d9b46a;
+    --line:#3a3327;
+    --glow:#241d13;
+    --line-strong:#4a4130;
+    --danger-line:#7a2a2a;
+    --danger-text:#c98c8c;
+    --danger-line-hover:#a34848;
+    --danger-text-hover:#e0a3a3;
+    --shadow:rgba(0,0,0,.45);
+    --scheme:dark;
+  }
+
+  /* --- Themes: each block just swaps the variables above. Paper is the default (set in <head> script). --- */
+  html[data-theme="midnight"]{
+    --ink:#0e1420; --ink-2:#151d2d; --ink-3:#1b2538; --ink-4:#243049;
+    --parchment:#dbe4f3; --parchment-dim:#9fb0c9; --brass:#4f7fd6; --brass-bright:#8ab4ff;
+    --muted:#7f8fab; --focus:#8ab4ff; --line:#27334b; --glow:#16233a; --line-strong:#34456a;
+    --danger-line:#8a3a3a; --danger-text:#d09a9a; --danger-line-hover:#b05555; --danger-text-hover:#e8b4b4;
+  }
+  html[data-theme="black"]{
+    --ink:#000000; --ink-2:#0e0e0e; --ink-3:#161616; --ink-4:#1f1f1f;
+    --parchment:#e8e8e8; --parchment-dim:#a8a8a8; --brass:#808080; --brass-bright:#ffffff;
+    --muted:#8a8a8a; --focus:#ffffff; --line:#2a2a2a; --glow:#0b0b0b; --line-strong:#3a3a3a;
+  }
+  html[data-theme="sepia"]{
+    --ink:#f4ecd8; --ink-2:#ebe0c6; --ink-3:#e3d6b8; --ink-4:#d9caa8;
+    --parchment:#3b2f22; --parchment-dim:#6b5a45; --brass:#9a6b24; --brass-bright:#7a4d12;
+    --muted:#857360; --focus:#7a4d12; --line:#d3c4a1; --glow:#faf4e4; --line-strong:#c4b28a;
+    --danger-line:#b5524a; --danger-text:#9c3b33; --danger-line-hover:#8f342d; --danger-text-hover:#7a2a24;
+    --shadow:rgba(70,45,10,.2); --scheme:light;
+  }
+  html[data-theme="paper"]{
+    --ink:#fafaf7; --ink-2:#f0f0ea; --ink-3:#e8e8e0; --ink-4:#dedbd2;
+    --parchment:#222222; --parchment-dim:#555555; --brass:#4a6fb0; --brass-bright:#2a5db0;
+    --muted:#77776f; --focus:#2a5db0; --line:#d9d9d0; --glow:#ffffff; --line-strong:#c4c4b8;
+    --danger-line:#b5524a; --danger-text:#9c3b33; --danger-line-hover:#8f342d; --danger-text-hover:#7a2a24;
+    --shadow:rgba(0,0,0,.16); --scheme:light;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ background:var(--ink); color-scheme:var(--scheme); }
+
+  /* Replace Chrome's default light scrollbars with slim themed ones. */
+  *{ scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{
+    background:var(--line);
+    border-radius:6px;
+    border:2px solid var(--ink);
+  }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--brass); }
+  .author-panel::-webkit-scrollbar-thumb{ border-color:var(--ink-2); }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, var(--glow) 0%, transparent 60%),
+      var(--ink);
+    color:var(--parchment);
+    font-family:'Source Serif 4', Georgia, serif;
+    line-height:1.5;
+  }
+
+  a{ color:inherit; }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .row:focus-visible, summary:focus-visible, .author-story-item:focus-visible{
+    outline:2px solid var(--focus);
+    outline-offset:2px;
+    border-radius:2px;
+  }
+
+  .wrap{
+    max-width:1280px;
+    margin:0 auto;
+    padding:3rem 1.5rem 4rem;
+    transition:margin-left .3s ease;
+  }
+
+  header{ margin-bottom:1.5rem; position:relative; }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin:0 0 .6rem;
+  }
+
+  header a.back{ text-decoration:none; color:var(--muted); }
+  header a.back:hover{ color:var(--parchment); }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(1.7rem, 4vw, 2.4rem);
+    line-height:1.1;
+    margin:.3rem 0 .5rem;
+    letter-spacing:-.01em;
+  }
+
+  .subhead{ color:var(--parchment-dim); font-size:.95rem; margin:0; }
+
+  /* --- Two-column page layout --- */
+  .page{
+    display:flex;
+    gap:2rem;
+    align-items:flex-start;
+  }
+
+  .main-col{
+    flex:1;
+    min-width:0;
+  }
+
+  .sidebar{
+    width:300px;
+    flex-shrink:0;
+    position:sticky;
+    top:3.25rem;
+    max-height:calc(100vh - 3.25rem);
+    overflow-y:auto;
+    padding:1.25rem 0 2rem 1.25rem;
+    border-left:1px solid var(--line);
+  }
+
+  @media (max-width:900px){
+    .page{ flex-direction:column; }
+    .sidebar{
+      width:100%;
+      position:static;
+      max-height:none;
+      overflow-y:visible;
+      border-left:none;
+      border-top:1px solid var(--line);
+      padding:1.25rem 0 0;
+      margin-top:1.5rem;
+    }
+  }
+
+  /* --- Author mini-portfolio panel ---
+     Slides in from the left and pushes .wrap to the right (eating into
+     what was the centered page's right-hand whitespace) rather than
+     overlaying the page, so search/filters stay visible and usable. */
+  .author-panel{
+    position:fixed;
+    top:0; left:0; bottom:0;
+    width:var(--author-panel-w);
+    max-width:88vw;
+    background:var(--ink-2);
+    border-right:1px solid var(--line);
+    box-shadow:none;
+    z-index:60;
+    transform:translateX(-100%);
+    transition:transform .3s ease, box-shadow .3s ease;
+    overflow-y:auto;
+    padding:1.5rem 1.35rem 2rem;
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+  }
+  .author-panel.open{ transform:translateX(0); box-shadow:12px 0 28px var(--shadow); }
+
+  /* Slide the page over so it sits flush against the panel (and the right edge). It keeps
+     its normal max-width, so it moves into the right-hand whitespace instead of stretching;
+     the panel absorbs the freed-up space. On narrower screens it simply shrinks to fit. */
+  body.author-panel-open .wrap{ margin-left:var(--author-panel-w); margin-right:0; }
+
+  /* Header + sort buttons stay pinned to the top of the panel while the
+     story list scrolls underneath. Negative margins cancel the panel's own
+     padding so the opaque background reaches the panel edges. */
+  .author-panel-top{
+    position:sticky;
+    top:-1.5rem;
+    z-index:5;
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+    margin:-1.5rem -1.35rem 0;
+    padding:1.5rem 1.35rem .75rem;
+    background:var(--ink-2);
+    box-shadow:0 1px 0 var(--line);
+  }
+
+  /* "Back to top" button: sits in the header directly below the close button
+     (absolutely positioned so showing it never changes the header height)
+     and fades in once the panel has scrolled. */
+  .author-panel-totop{
+    position:absolute;
+    top:calc(100% + .4rem);
+    right:0;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    cursor:pointer;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:0;
+    opacity:0;
+    transform:translateY(-4px);
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .author-panel-totop.show{ opacity:1; transform:none; pointer-events:auto; }
+  .author-panel-totop:hover{ color:var(--parchment); border-color:var(--brass); }
+  @media (prefers-reduced-motion:reduce){ .author-panel-totop{ transition:none; } }
+
+  .author-panel-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:.75rem;
+  }
+  .author-panel-eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin:0 0 .3rem;
+  }
+  .author-panel-head h2{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:1.25rem;
+    margin:0;
+    line-height:1.25;
+  }
+  .author-panel-namerow{
+    display:flex;
+    align-items:baseline;
+    flex-wrap:wrap;
+    column-gap:.75rem;
+  }
+  .author-panel-link{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    letter-spacing:.05em;
+    color:var(--brass-bright);
+    text-decoration:none;
+    white-space:nowrap;
+    opacity:0;
+    transition:opacity .15s ease;
+  }
+  .author-panel-link:hover{ text-decoration:underline; }
+  /* Revealed when hovering the name row or tabbing to the link; always shown
+     on touch devices, which have no hover. */
+  .author-panel-namerow:hover .author-panel-link,
+  .author-panel-link:focus-visible{ opacity:1; }
+  @media (hover:none){ .author-panel-link{ opacity:1; } }
+  .author-panel-meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.7rem;
+    color:var(--muted);
+    margin:.4rem 0 0;
+  }
+  .author-panel-head-actions{
+    display:flex;
+    align-items:center;
+    gap:.4rem;
+    flex-shrink:0;
+    position:relative;
+  }
+  .author-panel-bookmark{
+    flex-shrink:0;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    cursor:pointer;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:0;
+  }
+  .author-panel-bookmark svg{ width:14px; height:14px; display:block; }
+  .author-panel-bookmark:hover{ color:var(--parchment); border-color:var(--brass); }
+  .author-panel-bookmark.active{ color:var(--brass-bright); border-color:var(--brass); }
+  .author-panel-close{
+    flex-shrink:0;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    font-size:1.1rem;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .author-panel-close:hover{ color:var(--parchment); border-color:var(--brass); }
+
+  .author-panel-sort{
+    display:flex;
+    flex-wrap:nowrap;
+    gap:.3rem;
+  }
+  .author-sort-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    letter-spacing:.01em;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:.3rem .4rem;
+    min-height:31px;
+    border-radius:2px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex:1 1 auto;
+    min-width:0;
+    white-space:nowrap;
+    gap:.25rem;
+  }
+  .author-sort-btn:hover{ color:var(--parchment); border-color:var(--brass); }
+  .author-sort-btn.active{
+    background:none;
+    border-color:var(--brass);
+    color:var(--brass-bright);
+    font-weight:500;
+  }
+  .author-sort-btn .arrow{ font-size:.7rem; line-height:1; }
+
+  .author-panel-list{
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+    border-top:1px solid var(--line);
+    padding-top:.5rem;
+  }
+  /* Reuses the .author-story-item styling from the full Authors view so an
+     item expands in place to show its synopsis, tags, and chapters. */
+  .author-panel-list .author-story-item{ padding-right:2.9rem; }
+
+  #author-panel-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.5);
+    z-index:55;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+  }
+
+  @media (max-width:700px){
+    .author-panel{ width:100%; max-width:100%; }
+    body.author-panel-open .wrap{ margin-left:0; }
+    #author-panel-backdrop.show{ opacity:1; pointer-events:auto; }
+  }
+
+  /* --- Main column controls --- */
+  .controls-main{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:
+      linear-gradient(var(--ink) 88%, transparent),
+      var(--ink);
+    padding:1.25rem 0 1rem;
+    margin-bottom:1.5rem;
+    border-bottom:1px solid var(--line);
+  }
+
+  @media (max-width:900px){
+    .controls-main{ position:static; background:none; }
+  }
+
+  .search-row{
+    display:flex;
+    gap:.75rem;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  #search{
+    flex:1 1 120px;
+    min-width:0;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    color:var(--parchment);
+    font-family:'Source Serif 4', Georgia, serif;
+    font-size:1rem;
+    padding:.65rem .9rem;
+    border-radius:2px;
+  }
+  #search::placeholder{ color:var(--muted); }
+  #search:focus-visible{ border-color:var(--brass); }
+
+  .sort-group{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+  }
+
+  .sort-group label{ color:var(--muted); }
+
+  select{
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    color:var(--parchment);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    padding:.5rem .6rem;
+    border-radius:2px;
+  }
+
+  .mode-toggle{
+    display:inline-flex;
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .mode-toggle button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.05em;
+    background:var(--ink-2);
+    color:var(--muted);
+    border:none;
+    padding:.5rem .7rem;
+    cursor:pointer;
+  }
+  .mode-toggle button.active{
+    background:var(--brass);
+    color:var(--ink);
+    font-weight:500;
+  }
+
+  /* --- Sidebar: match toggle --- */
+  .sidebar-top{
+    /* Match toggle is the first thing in the sidebar. The small top margin
+       lines its top edge up with the Stories/Authors toggle, which is
+       vertically centered against the taller search input in its row. */
+    margin-top:.275rem;
+    /* Dividing line under the Match section. The extra .275rem cancels the
+       top margin above, so this line lands on the same level as the rule
+       under the search row in the main column. */
+    padding-bottom:1.275rem;
+    margin-bottom:0;
+    border-bottom:1px solid var(--line);
+  }
+  .sidebar-top .sort-group{ justify-content:space-between; width:100%; }
+
+  .tag-hint{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    color:var(--muted);
+    margin:0 0 .8rem;
+    line-height:1.4;
+  }
+
+  /* --- Tag group dropdowns --- */
+  .tag-groups{
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    margin-bottom:1.5rem;
+  }
+
+  .tag-group{
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:var(--ink-2);
+  }
+  .tag-group[open]{ border-color:var(--line-strong); }
+
+  .tag-group summary{
+    cursor:pointer;
+    list-style:none;
+    padding:.65rem .8rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.76rem;
+    letter-spacing:.03em;
+    color:var(--parchment-dim);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .tag-group summary::-webkit-details-marker{ display:none; }
+  .tag-group summary:hover{ color:var(--parchment); }
+
+  .summary-right{ display:flex; align-items:center; gap:.5rem; }
+
+  .group-badge{
+    background:var(--brass);
+    color:var(--ink);
+    font-size:.66rem;
+    font-weight:600;
+    padding:.05rem .4rem;
+    border-radius:10px;
+    display:none;
+    line-height:1.4;
+  }
+  .group-badge.show{ display:inline-block; }
+
+  .chevron{
+    color:var(--muted);
+    transition:transform .2s ease;
+    font-size:.7rem;
+  }
+  .tag-group[open] .chevron{ transform:rotate(90deg); }
+  .tag-group.closing .chevron{ transform:none; }
+  .tag-group.closing{ border-color:var(--line); }
+
+  .tag-group .tag-row{
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+    padding:.5rem .7rem .75rem;
+    border-top:1px solid var(--line);
+  }
+
+  .tag-chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    line-height:1.3;
+    background:var(--ink);
+    border:1px solid var(--line);
+    color:var(--parchment-dim);
+    padding:.45rem .6rem;
+    border-radius:2px;
+    cursor:pointer;
+    user-select:none;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:.6rem;
+    text-align:left;
+  }
+  .tag-chip:hover{ border-color:var(--brass); color:var(--parchment); }
+  .tag-chip.active{
+    background:var(--brass);
+    border-color:var(--brass);
+    color:var(--ink);
+    font-weight:500;
+  }
+  .tag-chip.excluded{
+    background:var(--ink);
+    border-color:var(--danger-line);
+    color:var(--danger-text);
+    text-decoration:line-through;
+    text-decoration-color:var(--danger-line);
+  }
+  .tag-chip.excluded:hover{ border-color:var(--danger-line-hover); color:var(--danger-text-hover); }
+  .tag-chip .count{ opacity:.65; font-size:.9em; flex-shrink:0; }
+  .tag-chip.active .count{ opacity:.75; }
+  .tag-chip.excluded .count{ opacity:.6; }
+
+  /* --- Sort dropdowns (sidebar) --- */
+  .sort-content{
+    display:flex;
+    flex-direction:column;
+    gap:.65rem;
+    padding:.6rem .8rem .8rem;
+    border-top:1px solid var(--line);
+  }
+
+  .sort-badge{ text-transform:none; }
+
+  .range-slider{
+    position:relative;
+    height:1.4rem;
+    margin-bottom:.3rem;
+  }
+
+  .range-slider .track{
+    position:absolute;
+    top:50%; left:0; right:0;
+    height:3px;
+    background:var(--line);
+    transform:translateY(-50%);
+    border-radius:2px;
+  }
+  .range-slider .track-fill{
+    position:absolute;
+    top:50%; height:3px;
+    background:var(--brass);
+    transform:translateY(-50%);
+    border-radius:2px;
+  }
+
+  .range-slider input[type="range"]{
+    position:absolute;
+    left:0; top:50%;
+    width:100%;
+    transform:translateY(-50%);
+    margin:0;
+    background:transparent;
+    -webkit-appearance:none;
+    appearance:none;
+    pointer-events:none;
+    height:0;
+  }
+  .range-slider input[type="range"]::-webkit-slider-thumb{
+    pointer-events:auto;
+    -webkit-appearance:none;
+    appearance:none;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--brass-bright);
+    border:2px solid var(--ink);
+    cursor:pointer;
+    margin-top:0;
+  }
+  .range-slider input[type="range"]::-moz-range-thumb{
+    pointer-events:auto;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--brass-bright);
+    border:2px solid var(--ink);
+    cursor:pointer;
+  }
+  .range-slider input[type="range"]::-moz-range-track{ background:transparent; border:none; }
+
+  .range-labels{
+    display:flex;
+    justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.7rem;
+    color:var(--parchment-dim);
+  }
+
+  .clear-link{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.74rem;
+    color:var(--muted);
+    background:none;
+    border:none;
+    text-decoration:underline;
+    text-underline-offset:3px;
+    cursor:pointer;
+    padding:.4rem 0;
+  }
+  .clear-link:hover{ color:var(--parchment); }
+  /* Permanently reserved row so showing/hiding the button never shifts layout. */
+  /* Its height equals the gap between the main column's rule and the first
+     story (1.5rem), so the sort/filter list starts level with that story. */
+  .clear-row{
+    height:1.5rem;
+    margin-bottom:0;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+  }
+  .clear-row .clear-link{ padding:.1rem 0; line-height:1.2; }
+
+  /* Search-scope toggle: same segmented look and size as Stories/Authors.
+     Each button is given the same fixed width those two buttons end up with
+     (their labels are the same length), so Title/Synopsis match instead of
+     sizing to their own text. */
+  /* Slides open/closed when switching between Stories and Authors. The
+     width animates (and the search bar flexes to fill the space); the
+     negative margin cancels the row gap so no empty gap is left behind. */
+  .scope-toggle{
+    max-width:calc(9.35rem + 2px);
+    opacity:1;
+    transition:max-width .3s ease, opacity .2s ease, margin-left .3s ease, border-width .3s ease;
+  }
+  .scope-toggle.collapsed{
+    max-width:0;
+    opacity:0;
+    margin-left:-.75rem;
+    border-width:0;
+    pointer-events:none;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .scope-toggle{ transition:none; }
+  }
+  .scope-toggle button{ width:4.675rem; padding-left:0; padding-right:0; }
+
+  /* --- Results --- */
+  /* minmax(0,1fr), not 1fr: a bare 1fr track can't shrink below its widest
+     unbreakable content, so a long chapter title (plus author credit) in an
+     expanded row would push the whole page wider than a phone screen. */
+  #results{ display:grid; grid-template-columns:minmax(0,1fr); gap:.4rem; }
+
+  .row{
+    display:block;
+    position:relative;
+    padding:.85rem 3.15rem .85rem .95rem;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:var(--ink-2);
+    margin-bottom:.4rem;
+    cursor:pointer;
+  }
+  .row:hover{ border-color:var(--brass); }
+  .row.expanded{ border-color:var(--brass); }
+
+  .row-top{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:.5rem;
+  }
+
+  .row .name{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:1.08rem;
+    color:var(--parchment);
+    text-decoration:none;
+    flex-shrink:0;
+  }
+
+  /* --- Bookmarks --- */
+  .bookmark-btn{
+    position:absolute;
+    top:-9px;
+    right:1.2rem;
+    width:34px;
+    height:40px;
+    background:var(--ink-3);
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    box-shadow:0 4px 7px var(--shadow);
+    color:var(--muted);
+    cursor:pointer;
+    padding:0 0 .4rem;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    line-height:0;
+    flex-shrink:0;
+    transition:background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .bookmark-btn svg{ width:19px; height:19px; display:block; }
+  .bookmark-btn:hover{ color:var(--brass-bright); border-color:var(--brass); }
+  .bookmark-btn:active{ transform:translateY(1px); }
+  .bookmark-btn.active{ background:var(--brass); border-color:var(--brass); color:var(--ink); }
+  .bookmark-btn.active:hover{ background:var(--brass-bright); border-color:var(--brass-bright); }
+  /* .small variant lives in the author lists (author page + sidebar). Those
+     are scrollable, borderless rows, so the tab hangs from the item's own top
+     edge (top:0, not negative) to avoid being clipped by the scroll area.
+     Same ribbon look as the main list, just a little smaller. */
+  .bookmark-btn.small{
+    top:0; right:.5rem;
+    width:28px; height:38px;
+    background:var(--ink-4);
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    box-shadow:0 3px 6px var(--shadow);
+    padding:0 0 .45rem;
+    align-items:flex-end;
+  }
+  .bookmark-btn.small svg{ width:16px; height:16px; }
+  .bookmark-btn.small:hover{ color:var(--brass-bright); border-color:var(--brass); }
+  .bookmark-btn.small.active{ background:var(--brass); border-color:var(--brass); color:var(--ink); }
+  .bookmark-btn.small.active:hover{ background:var(--brass-bright); border-color:var(--brass-bright); }
+
+  .saved-toggle{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    letter-spacing:.02em;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:.55rem .7rem;
+    border-radius:2px;
+    cursor:pointer;
+    white-space:nowrap;
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+  }
+  .saved-toggle svg{ width:14px; height:14px; flex-shrink:0; }
+  .saved-toggle:hover{ color:var(--parchment); border-color:var(--brass); }
+  .saved-toggle.active{
+    background:var(--brass);
+    border-color:var(--brass);
+    color:var(--ink);
+    font-weight:500;
+  }
+  .saved-toggle.excluded{
+    background:var(--ink);
+    border-color:var(--danger-line);
+    color:var(--danger-text);
+  }
+  .saved-toggle.excluded:hover{ border-color:var(--danger-line-hover); color:var(--danger-text-hover); }
+
+  .row .dash, .author-story-item > .row-top .dash{
+    color:var(--line);
+    flex-shrink:0;
+  }
+
+  .row .expand-indicator{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    color:var(--muted);
+    flex-shrink:0;
+  }
+
+  .row .meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    color:var(--brass);
+    letter-spacing:.01em;
+    min-width:0;
+  }
+
+  .author-story-item > .row-top .meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    color:var(--parchment-dim);
+    letter-spacing:.01em;
+    min-width:0;
+  }
+
+  .row .meta .sep, .author-story-item > .row-top .meta .sep{ color:var(--line); margin:0 .45em; }
+  .row .meta .pending{ color:var(--muted); font-style:italic; }
+
+  /* Top-level story entries in the author view reuse the main list's
+     title-dash-meta header line, just at the smaller author-list scale. */
+  .author-story-item > .row-top{ flex-wrap:wrap; }
+  .author-story-item > .row-top .dash{ display:none; }
+  .author-story-item > .row-top .meta{ flex:0 0 100%; }
+  .author-story-item > .row-top .meta .meta-line{ display:block; }
+  .author-story-item > .row-top .meta .nowrap{ white-space:nowrap; }
+  .author-story-item > .row-top .meta .vsep{
+    display:inline-block;
+    width:3px;
+    height:3px;
+    border-radius:50%;
+    margin:0 .7em;
+    background:var(--brass);
+    opacity:.6;
+    vertical-align:.25em;
+  }
+  .author-story-item > .row-top .name{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:.92rem;
+    color:var(--parchment);
+    text-decoration:none;
+    /* May shrink to the item's content box (which stops short of the bookmark
+       tab) and wrap onto further lines, instead of running underneath it. */
+    flex:0 1 auto;
+    min-width:0;
+    max-width:100%;
+    overflow-wrap:break-word;
+  }
+
+  .author-link{
+    font:inherit;
+    color:var(--brass-bright);
+    font-weight:500;
+    background:none;
+    border:none;
+    padding:0;
+    margin:0;
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-color:transparent;
+    text-underline-offset:2px;
+    transition:text-decoration-color .15s ease, color .15s ease;
+  }
+  .author-link:hover, .author-link:focus-visible{
+    color:var(--brass-bright);
+    text-decoration-color:var(--brass-bright);
+  }
+
+  /* Story header. The lead block is a wrapping flex row of two items:
+       1. "Title — by A - B - C"  (one inline flow; if it's too long for the
+          line, the names that don't fully fit wrap onto lines below it)
+       2. "Updated · chapters · words"  (a single item: it sits beside item 1
+          only if everything fits on one line, otherwise it moves down as a
+          whole - below any wrapped author lines, never beside them)
+     "▾ more" always stays on the FIRST line and follows the text: it starts
+     at the end of the details, and placeIndicator() (JS) moves it up behind
+     the last author that fits on line 1 when the details have dropped down.
+     If it can't follow any text it pins to the right edge (.pinned). */
+  .story-head{
+    contain:layout;
+    /* keeps "more" clear of the bookmark tab hanging in the row's corner */
+    margin-right:.75rem;
+  }
+  .story-lead{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    column-gap:1rem;
+    row-gap:.15rem;
+    min-width:0;
+  }
+  /* Small base size so wrapped author lines get a compact line box; the
+     title keeps its own (rem-based) size, so line 1 is unchanged. */
+  .story-id{ flex:0 1 auto; min-width:0; max-width:100%; font-size:.72rem; line-height:1.5; }
+  .story-lead .meta{ flex:0 1 auto; }
+  .story-lead .meta .nowrap{ white-space:nowrap; }
+  .story-head .expand-indicator{ white-space:nowrap; margin-left:.6em; }
+  .story-head .expand-indicator.pinned{ float:right; margin-left:.75rem; }
+  /* hidden only until its row has been placed, so it never visibly jumps */
+  .story-head:not(.placed) .expand-indicator{ visibility:hidden; }
+  .story-id .dash{ color:var(--line); font-size:1rem; margin:0 .1em; }
+  .by-chunk{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.01em;
+    color:var(--brass);
+    white-space:nowrap;
+  }
+  .by-dash{ color:var(--muted); }
+  /* Dash between the byline and the details ("Title — by A — Updated ..."). Only
+     shown while the details sit beside the byline on the same line; placeIndicator()
+     toggles .meta-inline on the header. */
+  .meta-dash{ display:none; color:var(--line); font-size:1rem; margin:0 .4em 0 -.55rem; }
+  .story-head.meta-inline .meta-dash{ display:inline; }
+
+  .row .synopsis{
+    font-size:.88rem;
+    color:var(--parchment-dim);
+    margin:.4rem 0 0;
+    line-height:1.4;
+  }
+
+  .expanded-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.4rem;
+    margin-top:.65rem;
+  }
+  .expanded-tags .tag-chip{
+    display:inline-flex;
+    width:auto;
+    border-radius:20px;
+    padding:.35rem .7rem;
+    font-size:.7rem;
+  }
+
+  /* --- Author view --- */
+  .author-row .expand-indicator{ color:var(--brass-bright); }
+
+  .author-stories{
+    margin-top:.65rem;
+    max-height:320px;
+    overflow-y:auto;
+    border-top:1px solid var(--line);
+    padding-top:.5rem;
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+  }
+
+  /* On the author page the sort buttons come first, so the divider goes
+     below them (between the buttons and the story list) instead of above. */
+  .author-stories.has-sort{
+    border-top:none;
+    padding-top:0;
+  }
+  /* Author-page sort buttons: fixed-ish width instead of stretching across
+     the whole row (the sidebar's buttons are unaffected). */
+  .author-row-sort .author-sort-btn{ flex:0 1 9.25rem; }
+  .author-stories.has-sort > .author-row-sort{
+    padding-bottom:.6rem;
+    margin-bottom:.2rem;
+    border-bottom:1px solid var(--line);
+  }
+
+  .author-story-item{
+    display:block;
+    position:relative;
+    padding:.4rem 2.9rem .4rem .2rem;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  .author-story-item:hover{ background:var(--ink-3); }
+  a.author-story-item.chapter-link{ color:inherit; text-decoration:none; }
+  .author-story-item.expanded{ background:var(--ink-3); }
+  /* Chapters live inside an expanded story item, which already uses --ink-3,
+     so the normal hover color was invisible there. Use a lighter shade. */
+  .author-story-item.expanded .chapter-link:hover,
+  .author-story-item.expanded .chapter-link:focus-visible{ background:var(--ink-4); }
+
+  .story-item-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:.75rem;
+  }
+
+  .author-story-item .story-item-name{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:.92rem;
+    color:var(--parchment);
+    text-decoration:none;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .author-story-item .meta-mini{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    color:var(--muted);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+
+  /* Chapter rows in multi-author stories: "Author(s) · 1,234 words".
+     On a wide row it all sits on one line. When the title and credit don't
+     fit side by side (phones, the narrow author panel, long collaborator
+     lists) the credit drops to its own right-aligned line under the title
+     rather than squeezing either one. */
+  .story-item-top.has-credit{
+    flex-wrap:wrap;
+    row-gap:.1rem;
+  }
+  .author-story-item .meta-mini.has-authors{
+    display:flex;
+    align-items:baseline;
+    justify-content:flex-end;
+    flex:0 1 auto;
+    min-width:0;
+    max-width:100%;
+    margin-left:auto;
+    white-space:normal;
+  }
+  .meta-mini .ch-authors{
+    min-width:0;
+    text-align:right;
+    color:var(--parchment-dim);
+  }
+  .meta-mini .ch-name{ white-space:nowrap; }
+  .meta-mini .ch-words{ flex:none; white-space:nowrap; }
+  .meta-mini .ch-dot{
+    flex:none;
+    width:3px;
+    height:3px;
+    margin:0 .7em;
+    border-radius:50%;
+    background:var(--brass);
+    opacity:.6;
+    position:relative;
+    top:-.28em;
+  }
+
+  .author-story-item .synopsis{ margin-top:.4rem; }
+  .author-story-item .expanded-tags{ margin-top:.5rem; }
+
+
+  .read-story-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    margin-top:.65rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.05em;
+    background:var(--brass);
+    color:var(--ink);
+    font-weight:500;
+    border:none;
+    border-radius:999px;
+    padding:.5rem 1rem;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .read-story-btn:hover{ background:var(--brass-bright); }
+
+  .empty-state{
+    text-align:center;
+    padding:3rem 1rem;
+    color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.85rem;
+  }
+
+  #sentinel{ height:1px; }
+
+  footer{
+    border-top:1px solid var(--line);
+    margin-top:2.5rem;
+    padding-top:1.25rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    color:var(--muted);
+    text-align:center;
+  }
+
+  /* --- Theme switcher (top-right corner) --- */
+  /* Fixed to the corner of the screen. On narrow screens (where nothing is sticky) it goes back
+     to the top-right of the header and scrolls away with the page instead of covering content. */
+  .theme-switcher{ position:fixed; top:14px; right:14px; z-index:20; }
+  @media (max-width:900px){
+    header{ padding-right:2.9rem; }
+    .theme-switcher{ position:absolute; top:0; right:0; }
+  }
+  .theme-btn{
+    width:34px; height:34px; border-radius:50%;
+    border:1px solid var(--line); background:var(--ink-2); color:var(--parchment-dim);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .theme-btn:hover{ color:var(--parchment); border-color:var(--brass); }
+  /* --- Page "back to top" button: sits just left of the theme button and fades in once the
+     page has scrolled down. Fixed, so on narrow screens (where the theme button scrolls away
+     with the header) it takes the top-right corner instead. --- */
+  .page-totop{
+    position:fixed; top:14px; right:56px; z-index:20;
+    width:34px; height:34px; border-radius:50%;
+    border:1px solid var(--line); background:var(--ink-2); color:var(--parchment-dim);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; line-height:0;
+    opacity:0; transform:translateY(-4px); pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease, color .15s ease, border-color .15s ease;
+  }
+  .page-totop.show{ opacity:1; transform:none; pointer-events:auto; }
+  .page-totop:hover{ color:var(--parchment); border-color:var(--brass); }
+  @media (max-width:900px){ .page-totop{ right:14px; } }
+  @media (prefers-reduced-motion:reduce){ .page-totop{ transition:none; } }
+  .theme-menu{
+    position:absolute; top:calc(100% + 8px); right:0; min-width:236px;
+    background:var(--ink-2); border:1px solid var(--line); border-radius:12px;
+    padding:6px; box-shadow:0 12px 32px var(--shadow);
+  }
+  .theme-menu[hidden]{ display:none; }
+  .theme-menu-title{
+    font-family:'IBM Plex Mono', monospace; font-size:.64rem; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--brass); padding:.45rem .6rem .35rem;
+  }
+  .theme-item{
+    display:flex; align-items:center; gap:.65rem; width:100%;
+    padding:.5rem .6rem; border:0; border-radius:8px; background:none;
+    color:var(--parchment); font-family:'IBM Plex Mono', monospace; font-size:.78rem;
+    letter-spacing:.02em; cursor:pointer; text-align:left; white-space:nowrap;
+  }
+  .theme-item:hover{ background:var(--ink-3); }
+  .theme-swatch{ width:22px; height:22px; border-radius:50%; border:1px solid var(--line); position:relative; flex:none; }
+  .theme-swatch::after{
+    content:''; position:absolute; right:3px; bottom:3px; width:9px; height:9px;
+    border-radius:50%; background:var(--dot);
+  }
+  .theme-check{ margin-left:auto; opacity:0; color:var(--brass-bright); }
+  .theme-item[aria-checked="true"] .theme-check{ opacity:1; }
+</style>
+</head>
+<body>
+
+<div id="author-panel-backdrop"></div>
+<aside id="author-panel" class="author-panel" aria-hidden="true">
+  <div class="author-panel-top">
+<div class="author-panel-head">
+    <div>
+      <p class="author-panel-eyebrow">Author</p>
+      <div class="author-panel-namerow">
+        <h2 id="author-panel-name"></h2>
+        <a id="author-panel-link" class="author-panel-link" href="#" target="_blank" rel="noopener noreferrer" title="Open this author's page on mcstories.com">Author page &#8599;</a>
+      </div>
+      <p class="author-panel-meta" id="author-panel-meta"></p>
+    </div>
+    <div class="author-panel-head-actions">
+      <button type="button" class="author-panel-bookmark" id="author-panel-bookmark" aria-pressed="false" aria-label="Bookmark this author" title="Bookmark this author"></button>
+      <button type="button" class="author-panel-close" id="author-panel-close" aria-label="Close">&times;</button>
+      <button type="button" class="author-panel-totop" id="author-panel-totop" aria-label="Scroll to top" title="Scroll to top" tabindex="-1">
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+    </button>
+    </div>
+  </div>
+  <div class="author-panel-sort" id="author-panel-sort">
+    <button type="button" class="author-sort-btn" data-field="title">Title</button>
+    <button type="button" class="author-sort-btn" data-field="added">Date Added</button>
+    <button type="button" class="author-sort-btn" data-field="updated">Updated</button>
+    <button type="button" class="author-sort-btn" data-field="words">Word Count</button>
+  </div>
+  </div>
+  <div class="author-panel-list" id="author-panel-list"></div>
+</aside>
+
+<button type="button" class="page-totop" id="page-totop" aria-label="Scroll to top" title="Scroll to top" tabindex="-1">
+  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+</button>
+
+<div class="wrap">
+
+
+  <header>
+    <div class="theme-switcher" id="theme-switcher">
+      <button type="button" class="theme-btn" id="theme-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Change theme" title="Change theme">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+      </button>
+      <div class="theme-menu" id="theme-menu" role="menu" aria-label="Theme" hidden>
+        <div class="theme-menu-title">Theme</div>
+      </div>
+    </div>
+    <p class="eyebrow"><a class="back" href="https://mcstories.com/index.html" target="_blank" rel="noopener noreferrer">← The Archive</a></p>
+    <h1 id="pagetitle">Browse every story</h1>
+    <p class="subhead" id="totalcount"></p>
+  </header>
+
+  <div class="page">
+
+    <div class="main-col">
+      <div class="controls-main">
+        <div class="search-row">
+          <input type="text" id="search" placeholder="Search titles…" autocomplete="off"/>
+          <div class="mode-toggle scope-toggle" id="scope-toggle" role="group" aria-label="Search in">
+            <button type="button" id="scope-title" class="active">Title</button>
+            <button type="button" id="scope-synopsis">Synopsis</button>
+          </div>
+          <div class="mode-toggle" role="group" aria-label="Browse by">
+            <button type="button" id="view-stories" class="active">Stories</button>
+            <button type="button" id="view-authors">Authors</button>
+          </div>
+          <button type="button" id="saved-toggle" class="saved-toggle" aria-pressed="false"><span class="saved-toggle-icon"></span><span class="saved-toggle-label"></span></button>
+        </div>
+      </div>
+
+      <div id="results"></div>
+      <div class="empty-state" id="emptystate" hidden>No stories match those filters.</div>
+      <div id="sentinel"></div>
+
+      <footer>
+      </footer>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="sort-group">
+          <span>Match</span>
+          <div class="mode-toggle" role="group" aria-label="Tag match mode">
+            <button type="button" id="mode-and" class="active">All tags</button>
+            <button type="button" id="mode-or">Any tag</button>
+          </div>
+        </div>
+      </div>
+      <div class="clear-row">
+        <button type="button" class="clear-link" id="clearall" hidden>Clear filters</button>
+      </div>
+
+      <div class="tag-groups" id="sortgroups">
+
+        <details class="tag-group sort-dd" data-field="title">
+          <summary><span class="summary-label" data-stories-label="Sort: Title" data-authors-label="Sort: Author Name">Sort: Title</span>
+            <span class="summary-right">
+              <span class="group-badge sort-badge" data-field="title"></span>
+              <span class="chevron">▸</span>
+            </span>
+          </summary>
+          <div class="sort-content">
+            <div class="mode-toggle dir-toggle" data-field="title" role="group" aria-label="Title sort direction">
+              <button type="button" data-dir="desc">A → Z</button>
+              <button type="button" data-dir="asc">Z → A</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="tag-group sort-dd" data-field="words">
+          <summary><span class="summary-label" data-stories-label="Sort: Word Count" data-authors-label="Sort: Total Words">Sort: Word Count</span>
+            <span class="summary-right">
+              <span class="group-badge sort-badge" data-field="words"></span>
+              <span class="chevron">▸</span>
+            </span>
+          </summary>
+          <div class="sort-content">
+            <div class="mode-toggle dir-toggle" data-field="words" role="group" aria-label="Word count sort direction">
+              <button type="button" data-dir="desc">High → Low</button>
+              <button type="button" data-dir="asc">Low → High</button>
+            </div>
+            <div class="range-slider" id="slider-words">
+              <div class="track"></div>
+              <div class="track-fill"></div>
+              <input type="range" class="thumb-min"/>
+              <input type="range" class="thumb-max"/>
+            </div>
+            <div class="range-labels"><span id="words-min-label"></span><span id="words-max-label"></span></div>
+          </div>
+        </details>
+
+        <details class="tag-group sort-dd" data-field="added" open>
+          <summary><span class="summary-label" data-stories-label="Sort: Date Added" data-authors-label="Sort: Latest Added">Sort: Date Added</span>
+            <span class="summary-right">
+              <span class="group-badge sort-badge" data-field="added"></span>
+              <span class="chevron">▸</span>
+            </span>
+          </summary>
+          <div class="sort-content">
+            <div class="mode-toggle dir-toggle" data-field="added" role="group" aria-label="Date added sort direction">
+              <button type="button" data-dir="desc">High → Low</button>
+              <button type="button" data-dir="asc">Low → High</button>
+            </div>
+            <div class="range-slider" id="slider-added">
+              <div class="track"></div>
+              <div class="track-fill"></div>
+              <input type="range" class="thumb-min"/>
+              <input type="range" class="thumb-max"/>
+            </div>
+            <div class="range-labels"><span id="added-min-label"></span><span id="added-max-label"></span></div>
+          </div>
+        </details>
+
+        <details class="tag-group sort-dd" data-field="updated">
+          <summary><span class="summary-label" data-stories-label="Sort: Date Updated" data-authors-label="Sort: Latest Updated">Sort: Date Updated</span>
+            <span class="summary-right">
+              <span class="group-badge sort-badge" data-field="updated"></span>
+              <span class="chevron">▸</span>
+            </span>
+          </summary>
+          <div class="sort-content">
+            <div class="mode-toggle dir-toggle" data-field="updated" role="group" aria-label="Date updated sort direction">
+              <button type="button" data-dir="desc">High → Low</button>
+              <button type="button" data-dir="asc">Low → High</button>
+            </div>
+            <div class="range-slider" id="slider-updated">
+              <div class="track"></div>
+              <div class="track-fill"></div>
+              <input type="range" class="thumb-min"/>
+              <input type="range" class="thumb-max"/>
+            </div>
+            <div class="range-labels"><span id="updated-min-label"></span><span id="updated-max-label"></span></div>
+          </div>
+        </details>
+
+      </div>
+
+      <div class="tag-groups" id="taggroups"></div>
+    </aside>
+
+  </div>
+</div>
+
+<script>
+// Theme switcher. The saved theme is applied in <head> before first paint; this wires up the menu.
+(function(){
+  var KEY = 'storyArchive.theme.v1';
+  var THEMES = [
+    {id:'paper',    label:'Paper (default)', ink:'#fafaf7', dot:'#2a5db0'},
+    {id:'sepia',    label:'Sepia',           ink:'#f4ecd8', dot:'#7a4d12'},
+    {id:'dark',     label:'Dark',            ink:'#15120e', dot:'#d9b46a'},
+    {id:'midnight', label:'Midnight',        ink:'#0e1420', dot:'#8ab4ff'},
+    {id:'black',    label:'Black',           ink:'#000000', dot:'#ffffff'}
+  ];
+  var root = document.documentElement;
+  var switcher = document.getElementById('theme-switcher');
+  var btn = document.getElementById('theme-btn');
+  var menu = document.getElementById('theme-menu');
+  if (!switcher || !btn || !menu) return;
+
+  function known(id){ return THEMES.some(function(t){ return t.id === id; }); }
+  function current(){ var id = root.getAttribute('data-theme'); return known(id) ? id : 'paper'; }
+
+  THEMES.forEach(function(t){
+    var item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'theme-item';
+    item.setAttribute('role', 'menuitemradio');
+    item.dataset.theme = t.id;
+    var sw = document.createElement('span');
+    sw.className = 'theme-swatch';
+    sw.style.background = t.ink;
+    sw.style.setProperty('--dot', t.dot);
+    var lab = document.createElement('span');
+    lab.textContent = t.label;
+    var chk = document.createElement('span');
+    chk.className = 'theme-check';
+    chk.setAttribute('aria-hidden', 'true');
+    chk.innerHTML = '&#10003;';
+    item.appendChild(sw); item.appendChild(lab); item.appendChild(chk);
+    menu.appendChild(item);
+  });
+
+  function mark(){
+    var cur = current();
+    menu.querySelectorAll('.theme-item').forEach(function(it){
+      it.setAttribute('aria-checked', it.dataset.theme === cur ? 'true' : 'false');
+    });
+  }
+
+  // silent = the change came from the host page (userscript), so don't echo it back.
+  function setTheme(id, silent){
+    if (!known(id)) return;
+    root.setAttribute('data-theme', id);
+    try { localStorage.setItem(KEY, id); } catch(e){}
+    if (!silent && window.parent !== window) {
+      try { window.parent.postMessage({mco:'theme', id:id}, '*'); } catch(e){}
+    }
+    mark();
+  }
+
+  function setMenu(open){
+    menu.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      var checked = menu.querySelector('.theme-item[aria-checked="true"]');
+      if (checked) checked.focus();
+    }
+  }
+
+  btn.addEventListener('click', function(){ setMenu(menu.hidden); });
+  menu.addEventListener('click', function(e){
+    var item = e.target.closest('.theme-item');
+    if (!item) return;
+    setTheme(item.dataset.theme, false);
+    setMenu(false);
+    btn.focus();
+  });
+  document.addEventListener('click', function(e){
+    if (!menu.hidden && !switcher.contains(e.target)) setMenu(false);
+  });
+  document.addEventListener('keydown', function(e){
+    if (menu.hidden) return;
+    if (e.key === 'Escape') { setMenu(false); btn.focus(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      var items = Array.prototype.slice.call(menu.querySelectorAll('.theme-item'));
+      var i = items.indexOf(document.activeElement);
+      i = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+      items[i].focus();
+      e.preventDefault();
+    }
+  });
+  // The userscript host page can push its theme into this page when it is shown as an overlay.
+  window.addEventListener('message', function(e){
+    var d = e.data;
+    if (d && d.mco === 'theme') setTheme(d.id, true);
+  });
+
+  mark();
+})();
+</script>
+
+<script>
+(function(){
+  var resultsEl = document.getElementById('results');
+
+  resultsEl.innerHTML = '<div class="empty-state" id="loadingstate">Loading stories…</div>';
+
+  fetch('stories.json', {cache: 'no-cache'})
+    .then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data){
+      init(data.stories, data.tags);
+    })
+    .catch(function(err){
+      resultsEl.innerHTML = '<div class="empty-state">Couldn\u2019t load story data (' + escapeErr(err.message) +
+        '). If you\u2019re opening this file directly from disk, try serving it from a local web server instead \u2014 ' +
+        'browsers block this kind of file loading for security reasons when a page is opened as a plain file.</div>';
+    });
+
+  function escapeErr(str){
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function init(stories, tagDefs){
+  var BOOKMARK_KEY = 'storyArchive.bookmarks.v1';
+  // Authors have their own, separate saved list (keyed by author name).
+  var AUTHOR_BOOKMARK_KEY = 'storyArchive.authorBookmarks.v1';
+
+  function loadBookmarks(key){
+    try {
+      var raw = localStorage.getItem(key);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch(e){ return new Set(); }
+  }
+  var BASE_URL = 'https://mcstories.com/';
+  function storyUrl(href){ return BASE_URL + href; }
+  // "Read story" goes straight to chapter 1 when the story has chapters;
+  // otherwise it falls back to the story's own page.
+  function readStoryUrl(s){
+    return storyUrl((s.chapters && s.chapters.length && s.chapters[0].href) ? s.chapters[0].href : s.href);
+  }
+  var bookmarks = loadBookmarks(BOOKMARK_KEY);
+  var authorBookmarks = loadBookmarks(AUTHOR_BOOKMARK_KEY);
+  function saveBookmarks(){
+    try { localStorage.setItem(BOOKMARK_KEY, JSON.stringify(Array.from(bookmarks))); } catch(e){}
+  }
+  function saveAuthorBookmarks(){
+    try { localStorage.setItem(AUTHOR_BOOKMARK_KEY, JSON.stringify(Array.from(authorBookmarks))); } catch(e){}
+  }
+  function toggleAuthorBookmark(name){
+    if (!name) return;
+    if (authorBookmarks.has(name)) authorBookmarks.delete(name);
+    else authorBookmarks.add(name);
+    saveAuthorBookmarks();
+    updateSavedToggleLabel();
+    updateAuthorPanelBookmark();
+  }
+  function toggleBookmark(href){
+    if (!href) return;
+    if (bookmarks.has(href)) bookmarks.delete(href);
+    else bookmarks.add(href);
+    saveBookmarks();
+    updateSavedToggleLabel();
+  }
+  function bookmarkBtnHtml(href, extraClass){
+    var on = bookmarks.has(href);
+    var icon = on
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
+    return '<button type="button" class="bookmark-btn' + (on ? ' active' : '') + (extraClass ? ' ' + extraClass : '') +
+      '" data-href="' + escapeHtml(href) + '" aria-pressed="' + on + '" aria-label="' +
+      (on ? 'Remove bookmark' : 'Bookmark this story') + '" title="' +
+      (on ? 'Remove bookmark' : 'Bookmark this story') + '">' + icon + '</button>';
+  }
+
+  // Bookmark tab for an author row (same look as a story's tab).
+  function authorBookmarkBtnHtml(name){
+    var on = authorBookmarks.has(name);
+    var icon = on
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
+    var label = on ? 'Remove author bookmark' : 'Bookmark this author';
+    return '<button type="button" class="bookmark-btn author-bookmark-btn' + (on ? ' active' : '') +
+      '" data-author="' + escapeHtml(name) + '" aria-pressed="' + on + '" aria-label="' + label + '" title="' + label + '">' + icon + '</button>';
+  }
+
+  var tagLabels = {};
+  var tagCounts = {};
+  Object.keys(tagDefs).forEach(function(code){
+    tagLabels[code] = tagDefs[code].label;
+    tagCounts[code] = tagDefs[code].count;
+  });
+
+  var TAG_GROUPS = [
+    { name: 'Relationships', tags: ['mf','ff','mm'] },
+    { name: 'Power Dynamics', tags: ['fd','md','ds','hm','nc'] },
+    { name: 'Kink & Fetish', tags: ['bd','ft','ex','la','ws','sc'] },
+    { name: 'Taboo', tags: ['in','be','ca'] },
+    { name: 'Genre & Setting', tags: ['sf','rb','ts','cb','fu'] },
+    { name: 'Other', tags: ['hu','ma','gr'] }
+  ];
+
+  var chips = {};
+  var taggroups = document.getElementById('taggroups');
+  var groupBadges = {};
+
+  function cycleTagState(code){
+    var chip = chips[code];
+    if (!chip) return;
+    var next = chip.dataset.state === 'none' ? 'include'
+              : chip.dataset.state === 'include' ? 'exclude'
+              : 'none';
+    chip.dataset.state = next;
+    chip.classList.toggle('active', next === 'include');
+    chip.classList.toggle('excluded', next === 'exclude');
+  }
+
+  function buildChip(code){
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'tag-chip';
+    chip.dataset.code = code;
+    chip.dataset.state = 'none';
+    chip.innerHTML = '<span class="label">' + tagLabels[code] + '</span><span class="count">' + (tagCounts[code] || 0) + '</span>';
+    chip.addEventListener('click', function(){
+      cycleTagState(code);
+      updateGroupBadges();
+      render();
+    });
+    chips[code] = chip;
+    return chip;
+  }
+
+  TAG_GROUPS.forEach(function(group, gi){
+    var details = document.createElement('details');
+    details.className = 'tag-group';
+
+    var summary = document.createElement('summary');
+    var badge = document.createElement('span');
+    badge.className = 'group-badge';
+    var right = document.createElement('span');
+    right.className = 'summary-right';
+    right.appendChild(badge);
+    var chevron = document.createElement('span');
+    chevron.className = 'chevron';
+    chevron.textContent = '\u25b8';
+    right.appendChild(chevron);
+
+    summary.textContent = group.name;
+    summary.appendChild(right);
+    details.appendChild(summary);
+
+    var row = document.createElement('div');
+    row.className = 'tag-row';
+    group.tags.forEach(function(code){
+      if (!(code in tagLabels)) return;
+      row.appendChild(buildChip(code));
+    });
+    details.appendChild(row);
+
+    taggroups.appendChild(details);
+    groupBadges[group.name] = { badge: badge, tags: group.tags };
+  });
+
+  var tagCodes = Object.keys(chips);
+
+  function updateGroupBadges(){
+    Object.keys(groupBadges).forEach(function(name){
+      var info = groupBadges[name];
+      var n = info.tags.filter(function(t){ return chips[t] && chips[t].dataset.state !== 'none'; }).length;
+      if (n > 0){
+        info.badge.textContent = n;
+        info.badge.classList.add('show');
+      } else {
+        info.badge.classList.remove('show');
+      }
+    });
+  }
+
+  var searchInput = document.getElementById('search');
+  var modeAnd = document.getElementById('mode-and');
+  var modeOr = document.getElementById('mode-or');
+  var viewStoriesBtn = document.getElementById('view-stories');
+  var viewAuthorsBtn = document.getElementById('view-authors');
+  var clearBtn = document.getElementById('clearall');
+  var resultsEl = document.getElementById('results');
+  var emptyEl = document.getElementById('emptystate');
+  var totalEl = document.getElementById('totalcount');
+  var pageTitleEl = document.getElementById('pagetitle');
+  var sentinel = document.getElementById('sentinel');
+  var savedToggle = document.getElementById('saved-toggle');
+  var savedToggleIcon = savedToggle.querySelector('.saved-toggle-icon');
+  var savedToggleLabel = savedToggle.querySelector('.saved-toggle-label');
+
+  var scopeToggle = document.getElementById('scope-toggle');
+  var scopeTitleBtn = document.getElementById('scope-title');
+  var scopeSynopsisBtn = document.getElementById('scope-synopsis');
+  // 'title' = search story titles only (default), 'synopsis' = search synopses only
+  var searchScope = 'title';
+  function updateScopeToggle(){
+    var isSyn = searchScope === 'synopsis';
+    scopeTitleBtn.classList.toggle('active', !isSyn);
+    scopeSynopsisBtn.classList.toggle('active', isSyn);
+    if (viewMode !== 'authors') searchInput.placeholder = isSyn ? 'Search synopses…' : 'Search titles…';
+    updateScopeCollapse();
+  }
+
+  // Author view always searches author names, so the toggle doesn't apply
+  // there and slides closed (the CSS transition on .scope-toggle does the
+  // sliding). Author rows no longer expand in place, so rebuilding the list
+  // is cheap and the slide can simply run as soon as the view changes.
+  function updateScopeCollapse(){
+    var collapse = viewMode === 'authors';
+    scopeToggle.classList.toggle('collapsed', collapse);
+    // Keep the collapsed buttons out of tab order / screen readers.
+    if (collapse) scopeToggle.setAttribute('inert', ''); else scopeToggle.removeAttribute('inert');
+    scopeToggle.setAttribute('aria-hidden', collapse);
+  }
+  function setScope(scope){
+    if (searchScope === scope) return;
+    searchScope = scope;
+    clearTimeout(debounceTimer);
+    render();
+  }
+  scopeTitleBtn.addEventListener('click', function(){ setScope('title'); });
+  scopeSynopsisBtn.addEventListener('click', function(){ setScope('synopsis'); });
+
+  var BOOKMARK_ICON_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
+  var BOOKMARK_ICON_FILLED = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3a2 2 0 0 0-2 2v16l8-5 8 5V5a2 2 0 0 0-2-2z"/></svg>';
+
+  // 'none' = no filter, 'include' = saved only, 'exclude' = hide saved.
+  // The Saved button follows the current view: in Stories it filters/counts
+  // saved stories, in Authors it filters/counts saved authors. Each view
+  // remembers its own filter state when you switch back and forth.
+  var savedStateByMode = {stories: 'none', authors: 'none'};
+  function currentSavedKey(){ return viewMode === 'authors' ? 'authors' : 'stories'; }
+  function updateSavedToggleLabel(){
+    var key = currentSavedKey();
+    var state = savedStateByMode[key];
+    var n = (key === 'authors' ? authorBookmarks : bookmarks).size;
+    savedToggle.classList.toggle('active', state === 'include');
+    savedToggle.classList.toggle('excluded', state === 'exclude');
+    savedToggle.setAttribute('aria-pressed', state === 'include');
+    savedToggleIcon.innerHTML = state === 'include' ? BOOKMARK_ICON_FILLED : BOOKMARK_ICON_OUTLINE;
+    var what = key === 'authors' ? 'Saved authors' : 'Saved stories';
+    var mode = state === 'include' ? 'showing only saved' : state === 'exclude' ? 'hiding saved' : 'click to filter';
+    savedToggle.title = what + ' (' + mode + ')';
+    savedToggle.setAttribute('aria-label', what + ': ' + n + ', ' + mode);
+    savedToggleLabel.textContent = n;
+  }
+  updateSavedToggleLabel();
+  savedToggle.addEventListener('click', function(){
+    var key = currentSavedKey();
+    var st = savedStateByMode[key];
+    savedStateByMode[key] = st === 'none' ? 'include' : st === 'include' ? 'exclude' : 'none';
+    updateSavedToggleLabel();
+    render();
+  });
+
+  // Everyone credited on a story, in byline order. `author` (first author) is
+  // kept in the data for compatibility; `authors` is the full list.
+  function authorsOf(s){
+    return (s.authors && s.authors.length) ? s.authors : (s.author ? [s.author] : []);
+  }
+
+  // True when a co-authored story's chapters do NOT all share the same credit
+  // (anthologies, tag-team serials). Only then are authors shown per chapter;
+  // when every chapter is by the same people, the byline already says it all.
+  function hasDifferingChapterCredits(s){
+    var base = authorsOf(s);
+    if (base.length < 2 || !s.chapters) return false;
+    var first = null;
+    for (var i = 0; i < s.chapters.length; i++){
+      var ch = s.chapters[i];
+      var key = ((ch.authors && ch.authors.length) ? ch.authors : base).slice().sort().join('\u0000');
+      if (first === null) first = key;
+      else if (key !== first) return true;
+    }
+    return false;
+  }
+
+  // How many of a story's words an author wrote. In a story with differing
+  // chapter credits that is just their chapters (so an anthology's total isn't
+  // credited in full to every contributor); otherwise it's the whole story.
+  function authorWords(s, name){
+    if (!('words' in s)) return 0;
+    if (!s._chapterCredits) return s.words;
+    var base = authorsOf(s);
+    return s.chapters.reduce(function(sum, ch){
+      var list = (ch.authors && ch.authors.length) ? ch.authors : base;
+      return list.indexOf(name) !== -1 ? sum + ch.words : sum;
+    }, 0);
+  }
+
+  var totalAuthorCount = Object.keys(stories.reduce(function(acc, s){
+    authorsOf(s).forEach(function(a){ acc[a] = 1; });
+    return acc;
+  }, {})).length;
+
+  var viewMode = 'stories';
+
+  // "Last Updated" comes from the data itself: the newest date_added / date_updated
+  // of any story, so it follows stories.json with no manual edit.
+  var lastUpdatedText = (function(){
+    var newest = '';
+    stories.forEach(function(s){
+      if (s.date_added && s.date_added > newest) newest = s.date_added;
+      if (s.date_updated && s.date_updated > newest) newest = s.date_updated;
+    });
+    var p = newest.split('-');
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var mon = months[parseInt(p[1], 10) - 1];
+    if (p.length !== 3 || !mon) return '';
+    return ' Last Updated ' + mon + ' ' + parseInt(p[2], 10) + ', ' + p[0];
+  })();
+
+  function updateTotalText(){
+    if (viewMode === 'authors'){
+      pageTitleEl.textContent = 'Browse every author';
+      totalEl.textContent = totalAuthorCount.toLocaleString() + ' authors. Click one to see everything they\u2019ve written.';
+    } else {
+      pageTitleEl.textContent = 'Browse every story';
+      totalEl.textContent = stories.length.toLocaleString() + ' stories.' + lastUpdatedText;
+    }
+  }
+  updateTotalText();
+
+  function updateSortLabels(){
+    document.querySelectorAll('.summary-label').forEach(function(el){
+      el.textContent = viewMode === 'authors' ? el.dataset.authorsLabel : el.dataset.storiesLabel;
+    });
+  }
+
+  viewStoriesBtn.addEventListener('click', function(){
+    if (viewMode === 'stories') return;
+    closeAuthorPanel();
+    viewMode = 'stories';
+    viewStoriesBtn.classList.add('active');
+    viewAuthorsBtn.classList.remove('active');
+    searchInput.placeholder = 'Search stories…';
+    clearTimeout(debounceTimer);
+    updateTotalText();
+    updateSortLabels();
+    render();
+  });
+
+  viewAuthorsBtn.addEventListener('click', function(){
+    if (viewMode === 'authors') return;
+    closeAuthorPanel();
+    viewMode = 'authors';
+    viewAuthorsBtn.classList.add('active');
+    viewStoriesBtn.classList.remove('active');
+    searchInput.placeholder = 'Search authors…';
+    clearTimeout(debounceTimer);
+    updateTotalText();
+    updateSortLabels();
+    render();
+  });
+
+  // Jump from a story's "by AuthorName" link straight to that author's
+  // full portfolio in the Authors view, pre-expanded and scrolled into
+  // view. Used by the mini-panel's "View all works" button.
+  function goToAuthor(name){
+    authorPanelExpandedSet.forEach(function(href){ authorStoryExpandedSet.add(href); });
+    closeAuthorPanel();
+    viewMode = 'authors';
+    viewAuthorsBtn.classList.add('active');
+    viewStoriesBtn.classList.remove('active');
+    searchInput.placeholder = 'Search authors…';
+    clearTimeout(debounceTimer);
+    searchInput.value = name;
+    authorExpandedSet.add(name);
+    updateTotalText();
+    updateSortLabels();
+    render();
+    requestAnimationFrame(function(){
+      var rows = resultsEl.querySelectorAll('.author-row');
+      for (var i = 0; i < rows.length; i++){
+        if (rows[i].dataset.author === name){
+          rows[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+          break;
+        }
+      }
+    });
+  }
+
+  // --- Author mini-portfolio side panel ---
+  // Opened from a story's "by AuthorName" link. This is a quick peek: it
+  // does NOT touch the current search, filters, or view mode, so browsing
+  // picks up right where it was left when the panel closes. It stays tied
+  // to whichever story row triggered it and auto-closes the moment that
+  // story is collapsed again (see the row-collapse handling below).
+  var authorPanelEl = document.getElementById('author-panel');
+  var authorPanelBackdrop = document.getElementById('author-panel-backdrop');
+  var authorPanelNameEl = document.getElementById('author-panel-name');
+  var authorPanelMetaEl = document.getElementById('author-panel-meta');
+  var authorPanelListEl = document.getElementById('author-panel-list');
+  var authorPanelCloseBtn = document.getElementById('author-panel-close');
+  var authorPanelTriggerHref = null;
+  var authorPanelName = null;
+  // The sidebar panel gets its own expanded-story tracking, separate from
+  // authorStoryExpandedSet (used by the full Authors view), so opening the
+  // panel always starts collapsed rather than remembering the last session.
+  var authorPanelExpandedSet = new Set();
+
+  // Simple 3-state sort for the panel's own story list: click a field once
+  // for descending, twice for ascending, a third time to clear back to the
+  // default (most-recent-date-added) order. Independent of the main list's
+  // sort/filter state.
+  var authorPanelSort = {field: 'added', dir: 'desc'};
+  var authorPanelSortEl = document.getElementById('author-panel-sort');
+
+  function authorPanelSortValue(s, field){
+    if (field === 'title') return stripArticle(s.title);
+    if (field === 'added') return (s._addedDays === null || s._addedDays === undefined) ? -Infinity : s._addedDays;
+    if (field === 'updated') return (s._updatedDays === null || s._updatedDays === undefined) ? -Infinity : s._updatedDays;
+    if (field === 'words') return ('words' in s) ? s.words : -Infinity;
+  }
+
+  function updateAuthorPanelSortButtons(){
+    authorPanelSortEl.querySelectorAll('.author-sort-btn').forEach(function(btn){
+      var field = btn.dataset.field;
+      var label = btn.textContent.replace(/^[\u2191\u2193]\s*/, '').trim();
+      if (field === authorPanelSort.field){
+        btn.classList.add('active');
+        var arrow = authorPanelSort.dir === 'asc' ? '\u2191' : '\u2193';
+        btn.innerHTML = '<span class="arrow">' + arrow + '</span>' + escapeHtml(label);
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = label;
+      }
+    });
+  }
+
+  authorPanelSortEl.addEventListener('click', function(e){
+    var btn = e.target.closest('.author-sort-btn');
+    if (!btn) return;
+    var field = btn.dataset.field;
+    if (authorPanelSort.field !== field){
+      authorPanelSort = {field: field, dir: 'desc'};
+    } else if (authorPanelSort.dir === 'desc'){
+      authorPanelSort.dir = 'asc';
+    } else {
+      authorPanelSort = {field: null, dir: null};
+    }
+    updateAuthorPanelSortButtons();
+    renderAuthorPanelList();
+  });
+
+  function renderAuthorPanelList(){
+    if (!authorPanelName) return;
+    var authored = stories.filter(function(s){ return authorsOf(s).indexOf(authorPanelName) !== -1; }).slice().sort(function(a,b){
+      var va = authorPanelSortValue(a, 'added'), vb = authorPanelSortValue(b, 'added');
+      return va < vb ? 1 : (va > vb ? -1 : 0);
+    });
+    if (authorPanelSort.field){
+      var field = authorPanelSort.field, dir = authorPanelSort.dir;
+      authored.sort(function(a,b){
+        var va = authorPanelSortValue(a, field), vb = authorPanelSortValue(b, field);
+        var cmp = va < vb ? -1 : (va > vb ? 1 : 0);
+        return dir === 'asc' ? cmp : -cmp;
+      });
+    }
+    authorPanelListEl.innerHTML = authored.map(function(s){
+      return storyItemHtml(s, authorPanelExpandedSet.has(s.href), true);
+    }).join('');
+  }
+
+  var authorPanelToTopBtn = document.getElementById('author-panel-totop');
+  function updateAuthorPanelToTop(){
+    var on = authorPanelEl.scrollTop > 0;
+    authorPanelToTopBtn.classList.toggle('show', on);
+    authorPanelToTopBtn.tabIndex = on ? 0 : -1;
+  }
+  authorPanelEl.addEventListener('scroll', updateAuthorPanelToTop, {passive:true});
+  authorPanelToTopBtn.addEventListener('click', function(){
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    authorPanelEl.scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'});
+  });
+
+  function openAuthorPanel(name, triggerHref){
+    authorPanelName = name;
+    authorPanelTriggerHref = triggerHref || null;
+    authorPanelExpandedSet = new Set();
+    authorPanelSort = {field: 'added', dir: 'desc'};
+    updateAuthorPanelSortButtons();
+
+    var authored = stories.filter(function(s){ return authorsOf(s).indexOf(name) !== -1; });
+    var totalWords = authored.reduce(function(sum,s){ return sum + authorWords(s, name); }, 0);
+
+    authorPanelNameEl.textContent = name;
+    // Author pages on the site are named after the author with spaces as dashes.
+    document.getElementById('author-panel-link').href =
+      'https://mcstories.com/Authors/' + encodeURIComponent(name.trim().replace(/\s+/g, '-')) + '.html';
+    authorPanelMetaEl.textContent = authored.length.toLocaleString() + (authored.length === 1 ? ' story' : ' stories') +
+      ' \u00b7 ' + totalWords.toLocaleString() + ' words total';
+    renderAuthorPanelList();
+    updateAuthorPanelBookmark();
+
+    authorPanelEl.classList.add('open');
+    authorPanelEl.setAttribute('aria-hidden', 'false');
+    authorPanelBackdrop.classList.add('show');
+    document.body.classList.add('author-panel-open');
+    authorPanelEl.scrollTop = 0;
+    updateAuthorPanelToTop();
+  }
+
+  function closeAuthorPanel(){
+    if (!authorPanelName) return;
+    authorPanelName = null;
+    authorPanelTriggerHref = null;
+    authorPanelExpandedSet = new Set();
+    authorPanelEl.classList.remove('open');
+    authorPanelEl.setAttribute('aria-hidden', 'true');
+    authorPanelBackdrop.classList.remove('show');
+    document.body.classList.remove('author-panel-open');
+  }
+
+  var authorPanelBookmarkBtn = document.getElementById('author-panel-bookmark');
+  function updateAuthorPanelBookmark(){
+    if (!authorPanelName) return;
+    var on = authorBookmarks.has(authorPanelName);
+    var label = on ? 'Remove author bookmark' : 'Bookmark this author';
+    authorPanelBookmarkBtn.classList.toggle('active', on);
+    authorPanelBookmarkBtn.setAttribute('aria-pressed', on);
+    authorPanelBookmarkBtn.setAttribute('aria-label', label);
+    authorPanelBookmarkBtn.title = label;
+    authorPanelBookmarkBtn.innerHTML = on ? BOOKMARK_ICON_FILLED : BOOKMARK_ICON_OUTLINE;
+  }
+  authorPanelBookmarkBtn.addEventListener('click', function(){
+    toggleAuthorBookmark(authorPanelName);
+    // If the Authors list is what's showing behind the panel, keep its tabs
+    // (and any Saved filter) in step.
+    if (viewMode === 'authors'){
+      if (savedStateByMode.authors === 'none') renderAuthorList(currentAuthorList);
+      else render();
+    }
+  });
+  authorPanelCloseBtn.addEventListener('click', closeAuthorPanel);
+  authorPanelBackdrop.addEventListener('click', closeAuthorPanel);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeAuthorPanel();
+  });
+
+  // Expand a story inside the panel to show its synopsis/tags/chapters.
+  // The panel uses its own authorPanelExpandedSet (reset each time the
+  // panel opens) rather than authorStoryExpandedSet, which belongs to the
+  // full Authors view - see goToAuthor() for how the two are reconciled
+  // when jumping from the panel to the full portfolio.
+  authorPanelListEl.addEventListener('click', function(e){
+    var bookmarkBtn = e.target.closest('.bookmark-btn');
+    if (bookmarkBtn){
+      toggleBookmark(bookmarkBtn.dataset.href);
+      renderAuthorPanelList();
+      return;
+    }
+    var tagBtn = e.target.closest('.tag-chip');
+    if (tagBtn){
+      // The panel's own story pool ignores tag filters entirely (it always
+      // shows everything by this author), so there's nothing to exempt here
+      // - just update the shared tag state and refresh both the panel and
+      // the main page so everything stays in sync, without collapsing.
+      cycleTagState(tagBtn.dataset.code);
+      updateGroupBadges();
+      render();
+      renderAuthorPanelList();
+      return;
+    }
+    if (e.target.closest('a.chapter-link') || e.target.closest('.author-stories') || e.target.closest('.read-story-btn')) return;
+    var item = e.target.closest('.author-story-item');
+    if (!item) return;
+    var href = item.dataset.href;
+    if (authorPanelExpandedSet.has(href)) authorPanelExpandedSet.delete(href);
+    else authorPanelExpandedSet.add(href);
+    renderAuthorPanelList();
+  });
+
+  authorPanelListEl.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var item = e.target.closest('.author-story-item:not(.chapter-link)');
+    if (!item || e.target !== item) return;
+    e.preventDefault();
+    var href = item.dataset.href;
+    if (authorPanelExpandedSet.has(href)) authorPanelExpandedSet.delete(href);
+    else authorPanelExpandedSet.add(href);
+    renderAuthorPanelList();
+  });
+
+  var matchMode = 'and';
+  modeAnd.addEventListener('click', function(){ matchMode='and'; modeAnd.classList.add('active'); modeOr.classList.remove('active'); render(); });
+  modeOr.addEventListener('click', function(){ matchMode='or'; modeOr.classList.add('active'); modeAnd.classList.remove('active'); render(); });
+
+  var sortField = 'added';
+  var sortDir = 'desc';
+
+  var sortDirLabels = { desc: '↓ High → Low', asc: '↑ Low → High' };
+
+  // Accordion with animated open/close: opening one dropdown slides any
+  // other open one in the same set shut. Animates the content's height
+  // instead of letting <details> snap instantly.
+  var ACCORDION_MS = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 320;
+  var ACCORDION_EASE = 'cubic-bezier(.4,0,.2,1)';
+
+  function makeAccordion(items, contentSelector){
+    items = Array.prototype.slice.call(items);
+
+    function isOpen(dd){ return dd.open && !dd.classList.contains('closing'); }
+
+    function animate(dd, opening){
+      var c = dd.querySelector(contentSelector);
+      if (dd._anim){ dd._anim.cancel(); dd._anim = null; }
+      c.style.overflow = 'hidden';
+      if (opening){
+        dd.classList.remove('closing');
+        dd.open = true;
+      } else {
+        dd.classList.add('closing');
+      }
+      var cs = getComputedStyle(c);
+      var full = {height:c.offsetHeight+'px', paddingTop:cs.paddingTop, paddingBottom:cs.paddingBottom, borderTopWidth:cs.borderTopWidth, opacity:1};
+      var none = {height:'0px', paddingTop:'0px', paddingBottom:'0px', borderTopWidth:'0px', opacity:0};
+      var anim = c.animate(opening ? [none, full] : [full, none], {duration:ACCORDION_MS, easing:ACCORDION_EASE});
+      dd._anim = anim;
+      anim.onfinish = function(){
+        dd._anim = null;
+        c.style.overflow = '';
+        if (!opening){ dd.open = false; dd.classList.remove('closing'); }
+      };
+    }
+
+    items.forEach(function(dd){
+      dd.querySelector('summary').addEventListener('click', function(e){
+        e.preventDefault();
+        if (isOpen(dd)){
+          animate(dd, false);
+          return;
+        }
+        items.forEach(function(other){
+          if (other !== dd && isOpen(other)) animate(other, false);
+        });
+        animate(dd, true);
+      });
+    });
+  }
+
+  makeAccordion(document.querySelectorAll('.sort-dd'), '.sort-content');
+  makeAccordion(document.querySelectorAll('#taggroups > .tag-group'), '.tag-row');
+
+  function updateSortUI(){
+    document.querySelectorAll('.dir-toggle').forEach(function(toggle){
+      var field = toggle.dataset.field;
+      toggle.querySelectorAll('button').forEach(function(btn){
+        btn.classList.toggle('active', field === sortField && btn.dataset.dir === sortDir);
+      });
+    });
+    document.querySelectorAll('.sort-badge').forEach(function(badge){
+      var isActive = badge.dataset.field === sortField;
+      badge.classList.toggle('show', isActive);
+      if (isActive) badge.textContent = sortDirLabels[sortDir];
+    });
+  }
+
+  document.querySelectorAll('.dir-toggle').forEach(function(toggle){
+    var field = toggle.dataset.field;
+    toggle.querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        sortField = field;
+        sortDir = btn.dataset.dir;
+        updateSortUI();
+        render();
+      });
+    });
+  });
+
+  updateSortUI();
+
+  function activeTags(){
+    return tagCodes.filter(function(c){ return chips[c].dataset.state === 'include'; });
+  }
+
+  function excludedTags(){
+    return tagCodes.filter(function(c){ return chips[c].dataset.state === 'exclude'; });
+  }
+
+  function stripArticle(t){
+    var low = t.toLowerCase();
+    if (low.indexOf('the ') === 0) return low.slice(4);
+    if (low.indexOf('an ') === 0) return low.slice(3);
+    if (low.indexOf('a ') === 0) return low.slice(2);
+    return low;
+  }
+
+  function toDays(iso){
+    if (!iso) return null;
+    var t = Date.parse(String(iso).slice(0, 10) + 'T00:00:00Z');
+    if (isNaN(t)) return null;
+    return Math.floor(t / 86400000);
+  }
+
+  function fmtDate(iso){
+    if (!iso) return null;
+    var parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var y = parts[0], m = parseInt(parts[1],10)-1, d = parseInt(parts[2],10);
+    return d + ' ' + months[m] + ' ' + y;
+  }
+
+  function fmtDays(days){
+    var d = new Date(days * 86400000);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getUTCDate() + ' ' + months[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+  }
+
+  stories.forEach(function(s){
+    s._addedDays = toDays(s.date_added);
+    s._updatedDays = toDays(s.date_updated);
+    s._chapterCredits = hasDifferingChapterCredits(s);
+  });
+
+  function buildSlider(containerId, minVal, maxVal, formatFn, labelMinEl, labelMaxEl, onChange){
+    var container = document.getElementById(containerId);
+    var thumbMin = container.querySelector('.thumb-min');
+    var thumbMax = container.querySelector('.thumb-max');
+    var fill = container.querySelector('.track-fill');
+
+    thumbMin.min = minVal; thumbMin.max = maxVal; thumbMin.value = minVal; thumbMin.step = 1;
+    thumbMax.min = minVal; thumbMax.max = maxVal; thumbMax.value = maxVal; thumbMax.step = 1;
+
+    function update(){
+      var lo = parseInt(thumbMin.value, 10);
+      var hi = parseInt(thumbMax.value, 10);
+      if (lo > hi){
+        var tmp = lo; lo = hi; hi = tmp;
+      }
+      var range = maxVal - minVal || 1;
+      var pctLo = (lo - minVal) / range * 100;
+      var pctHi = (hi - minVal) / range * 100;
+      fill.style.left = pctLo + '%';
+      fill.style.width = (pctHi - pctLo) + '%';
+      labelMinEl.textContent = formatFn(lo);
+      labelMaxEl.textContent = formatFn(hi);
+      return {lo: lo, hi: hi};
+    }
+
+    var state = update();
+
+    function handleInput(){
+      state = update();
+      onChange(state.lo, state.hi, state.lo === minVal && state.hi === maxVal);
+    }
+
+    thumbMin.addEventListener('input', handleInput);
+    thumbMax.addEventListener('input', handleInput);
+
+    return {
+      reset: function(){ thumbMin.value = minVal; thumbMax.value = maxVal; state = update(); },
+      isFull: function(){ return state.lo === minVal && state.hi === maxVal; },
+      getState: function(){ return state; }
+    };
+  }
+
+  var wordVals = stories.filter(function(s){ return 'words' in s; }).map(function(s){ return s.words; });
+  var wMin = wordVals.length ? Math.min.apply(null, wordVals) : 0;
+  var wMax = wordVals.length ? Math.max.apply(null, wordVals) : 0;
+
+  var addedVals = stories.filter(function(s){ return s._addedDays !== null; }).map(function(s){ return s._addedDays; });
+  var aMin = addedVals.length ? Math.min.apply(null, addedVals) : 0;
+  var aMax = addedVals.length ? Math.max.apply(null, addedVals) : 0;
+
+  var updatedVals = stories.filter(function(s){ return s._updatedDays !== null; }).map(function(s){ return s._updatedDays; });
+  var uMin = updatedVals.length ? Math.min.apply(null, updatedVals) : 0;
+  var uMax = updatedVals.length ? Math.max.apply(null, updatedVals) : 0;
+
+  var wordFilter = {lo: wMin, hi: wMax, active: false};
+  var addedFilter = {lo: aMin, hi: aMax, active: false};
+  var updatedFilter = {lo: uMin, hi: uMax, active: false};
+
+  var wordsSlider = buildSlider('slider-words', wMin, wMax,
+    function(v){ return v.toLocaleString() + ' words'; },
+    document.getElementById('words-min-label'), document.getElementById('words-max-label'),
+    function(lo, hi, isFull){ wordFilter = {lo: lo, hi: hi, active: !isFull}; debounceRender(); });
+
+  var addedSlider = buildSlider('slider-added', aMin, aMax,
+    fmtDays,
+    document.getElementById('added-min-label'), document.getElementById('added-max-label'),
+    function(lo, hi, isFull){ addedFilter = {lo: lo, hi: hi, active: !isFull}; debounceRender(); });
+
+  var updatedSlider = buildSlider('slider-updated', uMin, uMax,
+    fmtDays,
+    document.getElementById('updated-min-label'), document.getElementById('updated-max-label'),
+    function(lo, hi, isFull){ updatedFilter = {lo: lo, hi: hi, active: !isFull}; debounceRender(); });
+
+  var sliderDebounce;
+  function debounceRender(){
+    clearTimeout(sliderDebounce);
+    sliderDebounce = setTimeout(render, 60);
+  }
+
+  var pageSize = 150;
+  var shown = pageSize;
+  var io = new IntersectionObserver(function(entries){
+    if (entries[0].isIntersecting){
+      shown += pageSize;
+      if (viewMode === 'authors'){
+        renderAuthorList(currentAuthorList);
+      } else {
+        renderList(currentFiltered);
+      }
+    }
+  });
+  io.observe(sentinel);
+
+  var currentFiltered = stories;
+  var currentAuthorList = [];
+
+  function applyFilters(){
+    var q = searchInput.value.trim().toLowerCase();
+    var active = activeTags();
+    var excluded = excludedTags();
+
+    return stories.filter(function(s){
+      if (viewMode === 'authors'){
+        // Authors view: "Saved" and the name search are applied per author
+        // after grouping (see authorEntryMatches), since one story can now
+        // belong to several authors who don't all match.
+      } else {
+        var ss = savedStateByMode.stories;
+        if (ss === 'include' && !bookmarks.has(s.href)) return false;
+        if (ss === 'exclude' && bookmarks.has(s.href)) return false;
+      }
+
+      if (q){
+        if (viewMode === 'authors'){
+          // matched per author, after grouping
+        } else {
+          var haystack = searchScope === 'synopsis' ? (s.synopsis || '') : s.title;
+          if (haystack.toLowerCase().indexOf(q) === -1) return false;
+        }
+      }
+
+      if (active.length > 0){
+        var tagMatch = matchMode === 'and'
+          ? active.every(function(t){ return s.tags.indexOf(t) !== -1; })
+          : active.some(function(t){ return s.tags.indexOf(t) !== -1; });
+        if (!tagMatch) return false;
+      }
+
+      if (excluded.length > 0 && !exemptFromExclusion.has(s.href)){
+        var hasExcluded = excluded.some(function(t){ return s.tags.indexOf(t) !== -1; });
+        if (hasExcluded) return false;
+      }
+
+      if (wordFilter.active){
+        if (!('words' in s) || s.words < wordFilter.lo || s.words > wordFilter.hi) return false;
+      }
+      if (addedFilter.active){
+        if (s._addedDays === null || s._addedDays < addedFilter.lo || s._addedDays > addedFilter.hi) return false;
+      }
+      if (updatedFilter.active){
+        if (s._updatedDays === null || s._updatedDays < updatedFilter.lo || s._updatedDays > updatedFilter.hi) return false;
+      }
+
+      return true;
+    });
+  }
+
+  function sortStoriesList(list){
+    var field = sortField;
+    return list.slice().sort(function(a,b){
+      var cmp;
+      if (field === 'title'){
+        var ka = stripArticle(a.title), kb = stripArticle(b.title);
+        cmp = ka < kb ? -1 : (ka > kb ? 1 : 0);
+      } else if (field === 'added'){
+        var da = (a._addedDays === null) ? -Infinity : a._addedDays;
+        var db = (b._addedDays === null) ? -Infinity : b._addedDays;
+        cmp = da - db;
+      } else if (field === 'updated'){
+        var ua = (a._updatedDays === null) ? -Infinity : a._updatedDays;
+        var ub = (b._updatedDays === null) ? -Infinity : b._updatedDays;
+        cmp = ua - ub;
+      } else if (field === 'words'){
+        var wa = ('words' in a) ? a.words : -Infinity;
+        var wb = ('words' in b) ? b.words : -Infinity;
+        cmp = wa - wb;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+  }
+
+  function filterStories(){
+    return sortStoriesList(applyFilters());
+  }
+
+  // Author-level filters for the Authors tab: the "Saved" toggle and the
+  // name search (both formerly applied to a story's single author).
+  function authorEntryMatches(name, q){
+    var as = savedStateByMode.authors;
+    if (as === 'include' && !authorBookmarks.has(name)) return false;
+    if (as === 'exclude' && authorBookmarks.has(name)) return false;
+    if (q && name.toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  }
+
+  function buildAuthorList(storyPool){
+    var map = {};
+    storyPool.forEach(function(s){
+      authorsOf(s).forEach(function(a){
+        if (!map[a]) map[a] = [];
+        map[a].push(s);
+      });
+    });
+    return Object.keys(map).map(function(name){
+      var arr = map[name].slice().sort(function(a,b){
+        var da = (a._addedDays === null) ? -Infinity : a._addedDays;
+        var db = (b._addedDays === null) ? -Infinity : b._addedDays;
+        return db - da;
+      });
+      var totalWords = arr.reduce(function(sum,s){ return sum + authorWords(s, name); }, 0);
+      var latestAdded = arr.reduce(function(m,s){ return (s._addedDays !== null && (m === null || s._addedDays > m)) ? s._addedDays : m; }, null);
+      var latestUpdated = arr.reduce(function(m,s){ return (s._updatedDays !== null && (m === null || s._updatedDays > m)) ? s._updatedDays : m; }, null);
+      return { name: name, stories: arr, totalWords: totalWords, latestAdded: latestAdded, latestUpdated: latestUpdated, count: arr.length };
+    });
+  }
+
+  function sortAuthorList(list){
+    var field = sortField;
+    return list.slice().sort(function(a,b){
+      var cmp;
+      if (field === 'title'){
+        var ka = a.name.toLowerCase(), kb = b.name.toLowerCase();
+        cmp = ka < kb ? -1 : (ka > kb ? 1 : 0);
+      } else if (field === 'added'){
+        var da = (a.latestAdded === null) ? -Infinity : a.latestAdded;
+        var db = (b.latestAdded === null) ? -Infinity : b.latestAdded;
+        cmp = da - db;
+      } else if (field === 'updated'){
+        var ua = (a.latestUpdated === null) ? -Infinity : a.latestUpdated;
+        var ub = (b.latestUpdated === null) ? -Infinity : b.latestUpdated;
+        cmp = ua - ub;
+      } else if (field === 'words'){
+        cmp = a.totalWords - b.totalWords;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+  }
+
+  function truncate(str, n){
+    if (str.length <= n) return str;
+    var cut = str.slice(0, n);
+    var lastSpace = cut.lastIndexOf(' ');
+    return cut.slice(0, lastSpace > 0 ? lastSpace : n) + '\u2026';
+  }
+
+  var expandedSet = new Set();
+  var authorExpandedSet = new Set();
+  var authorStoryExpandedSet = new Set();
+  // Per-author sort state for the sort buttons inside each expanded author
+  // section on the main Authors view - independent of the side panel's own
+  // authorPanelSort, and independent per author so expanding several authors
+  // at once keeps their own sort choices.
+  var authorRowSort = {};
+
+  function authorRowSortButtonsHtml(name){
+    var sort = authorRowSort[name] || {field: 'added', dir: 'desc'};
+    var fields = [
+      {field: 'title', label: 'Title'},
+      {field: 'added', label: 'Date Added'},
+      {field: 'updated', label: 'Updated'},
+      {field: 'words', label: 'Word Count'}
+    ];
+    var btns = fields.map(function(f){
+      if (f.field === sort.field){
+        var arrow = sort.dir === 'asc' ? '\u2191' : '\u2193';
+        return '<button type="button" class="author-sort-btn active" data-field="' + f.field + '"><span class="arrow">' + arrow + '</span>' + escapeHtml(f.label) + '</button>';
+      }
+      return '<button type="button" class="author-sort-btn" data-field="' + f.field + '">' + escapeHtml(f.label) + '</button>';
+    }).join('');
+    return '<div class="author-panel-sort author-row-sort" data-author="' + escapeHtml(name) + '">' + btns + '</div>';
+  }
+  // Stories currently exempt from tag-exclusion filtering: when a user
+  // excludes a tag from within a story's own expanded tag list, that story
+  // would otherwise vanish out from under them mid-click. Exempting it here
+  // keeps it visible until they deliberately collapse the entry, at which
+  // point the exclusion takes effect normally.
+  var exemptFromExclusion = new Set();
+
+  function tagButtonHtml(code){
+    var label = tagLabels[code] || code;
+    var chip = chips[code];
+    var state = chip ? chip.dataset.state : 'none';
+    var cls = 'tag-chip' + (state === 'include' ? ' active' : state === 'exclude' ? ' excluded' : '');
+    return '<button type="button" class="' + cls + '" data-code="' + code + '">' + escapeHtml(label) + '</button>';
+  }
+
+  // Author credit for chapter rows. Only stories whose chapters have
+  // DIFFERENT credits get one (see hasDifferingChapterCredits); solo stories
+  // and fully co-written stories (same people on every chapter) keep plain
+  // rows, because the story's byline already says who wrote it.
+  // Lists are joined the way the archive writes bylines: "A and B",
+  // "A; B and C" (semicolons, since some names contain commas).
+  // Each name is its own no-wrap span so a long credit only ever wraps
+  // between names, never in the middle of one ("G-" / "Man001").
+  function creditHtml(list){
+    var names = list.map(function(a){ return '<span class="ch-name">' + escapeHtml(a) + '</span>'; });
+    if (names.length <= 1) return names[0] || '';
+    return names.slice(0, -1).join(names.length > 2 ? '; ' : '') + ' and ' + names[names.length - 1];
+  }
+
+  // One chapter's title line: name on the left, "[authors ·] N words" on the right.
+  function chapterTopHtml(s, ch){
+    var name = '<span class="story-item-name">' + escapeHtml(ch.name) + '</span>';
+    var words = ch.words.toLocaleString() + ' words';
+    if (!s._chapterCredits){
+      return '<div class="story-item-top">' + name + '<span class="meta-mini">' + words + '</span></div>';
+    }
+    var credit = creditHtml((ch.authors && ch.authors.length) ? ch.authors : s.authors);
+    return '<div class="story-item-top has-credit">' + name +
+      '<span class="meta-mini has-authors">' +
+        '<span class="ch-authors">' + credit + '</span>' +
+        '<span class="ch-dot" aria-hidden="true"></span>' +
+        '<span class="ch-words">' + words + '</span>' +
+      '</span>' +
+    '</div>';
+  }
+
+  // "by A - B - C": each name is its own link (opens that author's panel).
+  // A name and the dash after it are one no-wrap unit, so a long list wraps
+  // onto further lines only between names, with dashes ending a line.
+  // Returns inline chunks that sit right after the title in the header.
+  function bylineHtml(s){
+    var list = authorsOf(s);
+    if (!list.length) return '';
+    var chunks = list.map(function(name, i){
+      return '<span class="by-chunk">' + (i === 0 ? 'by&nbsp;' : '') +
+        '<button type="button" class="author-link" data-author="' + escapeHtml(name) + '">' + escapeHtml(name) + '</button>' +
+        (i < list.length - 1 ? '<span class="by-dash" aria-hidden="true">&nbsp;-</span>' : '') +
+      '</span>';
+    });
+    return chunks.join(' ');
+  }
+
+  // --- Keeping "more" on the title's line, following the text -------------
+  // CSS can't put an element right after whatever happens to end line 1, so
+  // this measures each header and moves the indicator:
+  //   1. Details beside the authors (all on one line): it stays at the end
+  //      of the details - nothing to do.
+  //   2. Details dropped to their own line: it goes behind the last author
+  //      that still fits on line 1 together with it (authors that don't fit
+  //      wrap below, as before).
+  //   3. Nothing on line 1 can carry it (e.g. a title that itself wraps):
+  //      it pins to the right edge of line 1 - "its wall".
+  function sameLine(rect, centerY){
+    return Math.abs((rect.top + rect.bottom) / 2 - centerY) < 8;
+  }
+
+  function placeIndicator(head){
+    var more = head.querySelector('.expand-indicator');
+    if (!more) return;
+    var id = head.querySelector('.story-id');
+    var meta = head.querySelector('.meta');
+    var nameEl = id.querySelector('.name');
+    var dash = id.querySelector('.dash');
+    var chunks = id.querySelectorAll('.by-chunk');
+
+    // Start from home (end of details) so re-measuring after a resize is clean.
+    more.classList.remove('pinned');
+    var oldBreak = id.querySelector('.by-break');
+    if (oldBreak) oldBreak.parentNode.removeChild(oldBreak);
+    meta.appendChild(more);
+
+    // 1. Details share the title's flex line: everything fits on one line.
+    //    Measure with the byline-to-details dash visible; keep it only if that
+    //    still fits beside the byline, otherwise hide it (details wrap below).
+    head.classList.add('meta-inline');
+    if (meta.getBoundingClientRect().top < id.getBoundingClientRect().bottom - 1) return;
+    head.classList.remove('meta-inline');
+
+    // Line 1 = the first line of the title.
+    var first = nameEl.getClientRects()[0];
+    if (!first) return;
+    var lineY = (first.top + first.bottom) / 2;
+
+    // Which author chunks are on line 1 (they're no-wrap, so one rect each)?
+    var last = -1;
+    for (var i = 0; i < chunks.length; i++){
+      if (sameLine(chunks[i].getBoundingClientRect(), lineY)) last = i; else break;
+    }
+    // Try behind the last chunk on line 1; if "more" doesn't fit there too,
+    // that chunk drops below and we try the one before it, and so on.
+    for (var k = last; k >= -1; k--){
+      if (k >= 0){
+        chunks[k].appendChild(more);
+      } else if (dash){
+        // Not even the first author fits together with "more": it stays up
+        // beside the title and every author moves to the line below.
+        dash.parentNode.insertBefore(more, dash.nextSibling);
+        var br = document.createElement('br');
+        br.className = 'by-break';
+        more.parentNode.insertBefore(br, more.nextSibling);
+      } else break;
+      if (sameLine(more.getBoundingClientRect(), lineY)) return;
+      if (k < 0){ var b2 = id.querySelector('.by-break'); if (b2) b2.parentNode.removeChild(b2); }
+    }
+    // 3. Nothing fits: pin it to the right edge of the first line.
+    more.classList.add('pinned');
+    id.insertBefore(more, id.firstChild);
+  }
+
+  // Placing is cheap but not free, so it's done in two tiers:
+  //   - rows on (or near) the screen are placed SYNCHRONOUSLY, in the same
+  //     task as the DOM change that needs it, i.e. before the browser paints.
+  //     Without this, every re-render (expanding/collapsing a story, resizing,
+  //     opening the author panel) would show a frame or two of unplaced rows:
+  //     "more" hidden and multi-author text in its un-measured layout.
+  //   - everything further away is placed lazily as it scrolls toward the
+  //     screen (the list can grow to thousands of rows).
+  var PLACE_MARGIN = 700;   // px above/below the viewport that count as "near"
+  var placeEpoch = 0;       // bumped whenever line breaks may have changed
+
+  function ensurePlaced(head){
+    if (head._placeEpoch === placeEpoch) return;     // already right for this width
+    placeIndicator(head);
+    head._placeEpoch = placeEpoch;
+    head.classList.add('placed');
+  }
+
+  function placeNearViewport(){
+    var heads = resultsEl.querySelectorAll('.story-head');
+    var n = heads.length;
+    if (!n) return;
+    var vh = window.innerHeight;
+    // Rows are in document order, so binary-search the first one that reaches
+    // the near zone instead of measuring thousands of rows.
+    var lo = 0, hi = n;
+    while (lo < hi){
+      var mid = (lo + hi) >> 1;
+      if (heads[mid].getBoundingClientRect().bottom < -PLACE_MARGIN) lo = mid + 1; else hi = mid;
+    }
+    // Read first, then write: collect the near rows before moving anything.
+    var near = [];
+    for (var i = lo; i < n; i++){
+      if (heads[i].getBoundingClientRect().top > vh + PLACE_MARGIN) break;
+      near.push(heads[i]);
+    }
+    near.forEach(ensurePlaced);
+  }
+
+  // Everything else is placed as it scrolls near. Rows stay observed so a row
+  // that was placed for an older width is fixed when it comes back into range.
+  var placeIO = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (en.isIntersecting) ensurePlaced(en.target);
+    });
+  }, { rootMargin: PLACE_MARGIN + 'px 0px' });
+
+  function observeHeads(){
+    placeIO.disconnect();
+    resultsEl.querySelectorAll('.story-head').forEach(function(h){ placeIO.observe(h); });
+  }
+
+  // Line breaks change when the column width changes (window resize, author
+  // panel sliding open/closed) and when web fonts arrive. ResizeObserver runs
+  // before paint, so near rows are re-placed without ever showing stale text.
+  function relayoutIndicators(){
+    placeEpoch++;
+    placeNearViewport();
+  }
+  if (window.ResizeObserver){
+    var lastResultsWidth = resultsEl.clientWidth;
+    new ResizeObserver(function(){
+      var w = resultsEl.clientWidth;
+      if (w !== lastResultsWidth){ lastResultsWidth = w; relayoutIndicators(); }
+    }).observe(resultsEl);
+  }
+  if (document.fonts){
+    if (document.fonts.ready) document.fonts.ready.then(relayoutIndicators);
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', relayoutIndicators);
+  }
+
+  function renderList(list){
+    var slice = list.slice(0, shown);
+    resultsEl.innerHTML = slice.map(function(s){
+      var metaHtml, synopsisHtml = '', bylineInline = '';
+      var isExpanded = expandedSet.has(s.href);
+
+      if ('words' in s){
+        var bits = [];
+        bylineInline = bylineHtml(s);
+        var added = fmtDate(s.date_added);
+        var updated = fmtDate(s.date_updated);
+        if (updated) bits.push('Updated ' + updated);
+        else if (added) bits.push('Added ' + added);
+        bits.push(s.words.toLocaleString() + ' words');
+        // Each detail is a no-wrap unit so it never splits; the
+        // <wbr> after each dot is the only place the line may break.
+        metaHtml = bits.map(function(b){ return '<span class="nowrap">' + b + '</span>'; })
+                       .join('<span class="sep">\u00b7</span><wbr>');
+        if (s.synopsis){
+          var text = isExpanded ? s.synopsis : truncate(s.synopsis, 220);
+          synopsisHtml = '<p class="synopsis">' + escapeHtml(text) + '</p>';
+        }
+      } else {
+        metaHtml = '<span class="pending">details not yet available</span>';
+      }
+
+      if (isExpanded){
+        if (s.tags && s.tags.length){
+          synopsisHtml += '<div class="expanded-tags">' + s.tags.map(tagButtonHtml).join('') + '</div>';
+        }
+        synopsisHtml += '<a class="read-story-btn" href="' + readStoryUrl(s) + '" target="_blank" rel="noopener noreferrer">Read story \u2192</a>';
+        if (s.chapters && s.chapters.length){
+          synopsisHtml += '<div class="author-stories">' + s.chapters.map(function(ch){
+            return '<a class="author-story-item chapter-link" href="' + storyUrl(ch.href) + '" target="_blank" rel="noopener noreferrer">' +
+              chapterTopHtml(s, ch) +
+            '</a>';
+          }).join('') + '</div>';
+        }
+      }
+
+      var indicator = s.synopsis ? (isExpanded ? '\u25b4 less' : '\u25be more') : '';
+      var titleHtml = '<span class="name">' + escapeHtml(s.title) + '</span>';
+
+      return '<div class="row' + (isExpanded ? ' expanded' : '') + '" data-href="' + escapeHtml(s.href) + '" tabindex="0" role="button" aria-expanded="' + isExpanded + '">' +
+        bookmarkBtnHtml(s.href) +
+        '<div class="story-head">' +
+          '<div class="story-lead">' +
+            '<div class="story-id">' + titleHtml +
+              (bylineInline ? ' <span class="dash">\u2014</span> ' + bylineInline : '') +
+            '</div>' +
+            '<span class="meta">' + (bylineInline ? '<span class="meta-dash" aria-hidden="true">\u2014</span>' : '') + metaHtml +
+              (indicator ? '<span class="expand-indicator">' + indicator + '</span>' : '') +
+            '</span>' +
+          '</div>' +
+        '</div>' +
+        synopsisHtml +
+      '</div>';
+    }).join('');
+    placeNearViewport();   // before paint: nothing on screen is ever unplaced
+    observeHeads();
+    emptyEl.hidden = list.length !== 0;
+  }
+
+  // Renders one expandable story entry used both in the full Authors view
+  // and the author mini-panel, so expanding a story shows the same
+  // synopsis, tags, and chapter list in either place.
+  function storyItemHtml(s, isItemExpanded, hideChapterCount){
+    // Line 1: date added · date updated. Line 2: chapter count · word count. Each line
+    // is its own block with no-wrap pieces so "1 chapter" never splits.
+    var addedStr = fmtDate(s.date_added);
+    var chapCount = s.chapters ? s.chapters.length : 0;
+    var line2Bits = hideChapterCount ? [] : [chapCount + (chapCount === 1 ? ' chapter' : ' chapters')];
+    if ('words' in s) line2Bits.push(s.words.toLocaleString() + ' words');
+    var metaHtml = '';
+    var updatedStr = fmtDate(s.date_updated);
+    var line1Bits = [];
+    if (addedStr) line1Bits.push('Added ' + addedStr);
+    if (updatedStr) line1Bits.push('Updated ' + updatedStr);
+    if (line1Bits.length){
+      metaHtml += '<span class="meta-line">' +
+        line1Bits.map(function(b){ return '<span class="nowrap">' + b + '</span>'; })
+                 .join('<span class="vsep" aria-hidden="true"></span>') +
+        '</span>';
+    }
+    metaHtml += '<span class="meta-line">' +
+      line2Bits.map(function(b){ return '<span class="nowrap">' + b + '</span>'; })
+               .join('<span class="vsep" aria-hidden="true"></span>') +
+      '</span>';
+    var extra = '';
+    if (isItemExpanded){
+      var synHtml = s.synopsis ? '<p class="synopsis">' + escapeHtml(s.synopsis) + '</p>' : '';
+      var tagsHtml = (s.tags && s.tags.length)
+        ? '<div class="expanded-tags">' + s.tags.map(tagButtonHtml).join('') + '</div>'
+        : '';
+      var chaptersHtml = '';
+      if (s.chapters && s.chapters.length){
+        chaptersHtml = '<div class="author-stories">' + s.chapters.map(function(ch){
+          return '<a class="author-story-item chapter-link" href="' + storyUrl(ch.href) + '" target="_blank" rel="noopener noreferrer">' +
+            chapterTopHtml(s, ch) +
+          '</a>';
+        }).join('') + '</div>';
+      }
+      extra = synHtml + tagsHtml + '<a class="read-story-btn" href="' + readStoryUrl(s) + '" target="_blank" rel="noopener noreferrer">Read story \u2192</a>' + chaptersHtml;
+    }
+    var headHtml = '<div class="row-top">' +
+      '<span class="name">' + escapeHtml(s.title) + '</span>' +
+      '<span class="dash">\u2014</span>' +
+      '<span class="meta">' + metaHtml + '</span>' +
+    '</div>';
+    return '<div class="author-story-item' + (isItemExpanded ? ' expanded' : '') + '" data-href="' + escapeHtml(s.href) + '" tabindex="0" role="button" aria-expanded="' + isItemExpanded + '">' +
+      bookmarkBtnHtml(s.href, 'small') +
+      headHtml +
+      extra +
+    '</div>';
+  }
+
+  function renderAuthorList(list){
+    var slice = list.slice(0, shown);
+
+    // Re-rendering replaces .author-stories (an internally-scrolling list),
+    // which would otherwise reset its scroll position to the top. Capture
+    // and restore it so expanding/collapsing a story doesn't lose your place.
+    var scrollPositions = {};
+    resultsEl.querySelectorAll('.author-row').forEach(function(row){
+      var inner = row.querySelector('.author-stories');
+      if (inner) scrollPositions[row.dataset.author] = inner.scrollTop;
+    });
+
+    resultsEl.innerHTML = slice.map(function(entry){
+      var isExpanded = false; // rows never expand; clicking opens the sidebar
+
+      var bits = [];
+      bits.push(entry.count + (entry.count === 1 ? ' story' : ' stories'));
+      bits.push(entry.totalWords.toLocaleString() + ' words total');
+      if (entry.latestAdded !== null) bits.push('Latest ' + fmtDays(entry.latestAdded));
+      var metaHtml = bits.join('<span class="sep">\u00b7</span>');
+
+      var indicator = 'view stories \u203a';
+
+      var storiesHtml = '';
+      if (isExpanded){
+        var rowSort = authorRowSort[entry.name];
+        var rowStories = entry.stories;
+        if (rowSort && rowSort.field){
+          rowStories = rowStories.slice().sort(function(a,b){
+            var va = authorPanelSortValue(a, rowSort.field), vb = authorPanelSortValue(b, rowSort.field);
+            var cmp = va < vb ? -1 : (va > vb ? 1 : 0);
+            return rowSort.dir === 'asc' ? cmp : -cmp;
+          });
+        }
+        storiesHtml = '<div class="author-stories has-sort">' + authorRowSortButtonsHtml(entry.name) +
+          rowStories.map(function(s){
+            return storyItemHtml(s, authorStoryExpandedSet.has(s.href));
+          }).join('') + '</div>';
+      }
+
+      return '<div class="row author-row' + (isExpanded ? ' expanded' : '') + '" data-author="' + escapeHtml(entry.name) + '" tabindex="0" role="button" aria-expanded="' + isExpanded + '">' +
+        authorBookmarkBtnHtml(entry.name) +
+        '<div class="row-top">' +
+          '<span class="name">' + escapeHtml(entry.name) + '</span>' +
+          '<span class="dash">\u2014</span>' +
+          '<span class="meta">' + metaHtml + ' <span class="expand-indicator">' + indicator + '</span></span>' +
+        '</div>' +
+        storiesHtml +
+      '</div>';
+    }).join('');
+
+    resultsEl.querySelectorAll('.author-row').forEach(function(row){
+      var pos = scrollPositions[row.dataset.author];
+      if (pos){
+        var inner = row.querySelector('.author-stories');
+        if (inner) inner.scrollTop = pos;
+      }
+    });
+
+    emptyEl.hidden = list.length !== 0;
+  }
+
+  resultsEl.addEventListener('click', function(e){
+    var authorLink = e.target.closest('.author-link');
+    if (authorLink){
+      e.stopPropagation();
+      var linkRow = authorLink.closest('.row');
+      openAuthorPanel(authorLink.dataset.author, linkRow ? linkRow.dataset.href : null);
+      return;
+    }
+
+    var bookmarkBtn = e.target.closest('.bookmark-btn');
+    if (bookmarkBtn){
+      if (bookmarkBtn.classList.contains('author-bookmark-btn')){
+        toggleAuthorBookmark(bookmarkBtn.dataset.author);
+        // With no Saved filter on, just redraw the rows in place (keeps the
+        // list as far down as it's been loaded); otherwise re-filter.
+        if (savedStateByMode.authors === 'none') renderAuthorList(currentAuthorList);
+        else render();
+        return;
+      }
+      toggleBookmark(bookmarkBtn.dataset.href);
+      render();
+      return;
+    }
+
+    if (viewMode === 'authors'){
+      var authorRow = e.target.closest('.author-row');
+      if (!authorRow) return;
+
+      var rowSortBtn = e.target.closest('.author-row-sort .author-sort-btn');
+      if (rowSortBtn){
+        e.stopPropagation();
+        var rowSortName = authorRow.dataset.author;
+        var field = rowSortBtn.dataset.field;
+        var current = authorRowSort[rowSortName] || {field: 'added', dir: 'desc'};
+        if (current.field !== field){
+          authorRowSort[rowSortName] = {field: field, dir: 'desc'};
+        } else if (current.dir === 'desc'){
+          authorRowSort[rowSortName] = {field: field, dir: 'asc'};
+        } else {
+          delete authorRowSort[rowSortName];
+        }
+        renderAuthorList(currentAuthorList);
+        return;
+      }
+
+      var tagBtn2 = e.target.closest('.tag-chip');
+      if (tagBtn2){
+        var ownerItem2 = tagBtn2.closest('.author-story-item[data-href]');
+        cycleTagState(tagBtn2.dataset.code);
+        updateGroupBadges();
+        // Same exploratory exemption as the main list: don't let a story
+        // vanish out of its author's list mid-click just because you
+        // excluded one of its own tags.
+        if (ownerItem2) exemptFromExclusion.add(ownerItem2.dataset.href);
+        render();
+        return;
+      }
+
+      var storyItem = e.target.closest('.author-story-item:not(.chapter-link)');
+      if (storyItem){
+        if (e.target.closest('a.chapter-link') || e.target.closest('.read-story-btn')) return; // let chapter links navigate
+        var storyHref = storyItem.dataset.href;
+        if (authorStoryExpandedSet.has(storyHref)){
+          authorStoryExpandedSet.delete(storyHref);
+          if (exemptFromExclusion.has(storyHref)){
+            exemptFromExclusion.delete(storyHref);
+            render();
+            return;
+          }
+        } else {
+          authorStoryExpandedSet.add(storyHref);
+        }
+        renderAuthorList(currentAuthorList);
+        return;
+      }
+
+      if (e.target.closest('.author-stories')){
+        return; // clicked empty space in the scroll area, not on an item - ignore so scrolling never closes anything
+      }
+      // Authors no longer expand in place; the sidebar is the author page.
+      openAuthorPanel(authorRow.dataset.author, null);
+      return;
+    }
+
+    var tagBtn = e.target.closest('.tag-chip');
+    if (tagBtn){
+      var ownerRow = tagBtn.closest('.row[data-href]');
+      cycleTagState(tagBtn.dataset.code);
+      updateGroupBadges();
+      // Clicking a tag from within a story's own expanded tag list is
+      // exploratory - keep that story visible even if the tag is now
+      // excluded, so it doesn't disappear mid-click. It'll be re-filtered
+      // normally once the user collapses it.
+      if (ownerRow) exemptFromExclusion.add(ownerRow.dataset.href);
+      render();
+      return;
+    }
+    if (e.target.closest('.author-stories') || e.target.closest('.read-story-btn')) return;
+    var row = e.target.closest('.row');
+    if (!row) return;
+    var href = row.dataset.href;
+    if (expandedSet.has(href)){
+      expandedSet.delete(href);
+      if (href === authorPanelTriggerHref) closeAuthorPanel();
+      if (exemptFromExclusion.has(href)){
+        // Collapsing re-exposes it to the tag-exclusion filter, so a story
+        // excluded while expanded now drops out of the list as expected.
+        exemptFromExclusion.delete(href);
+        render();
+        return;
+      }
+    } else {
+      expandedSet.add(href);
+    }
+    renderList(currentFiltered);
+  });
+
+  resultsEl.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+
+    if (viewMode === 'authors'){
+      var storyItem = e.target.closest('.author-story-item:not(.chapter-link)');
+      if (storyItem && e.target === storyItem){
+        e.preventDefault();
+        var storyHref = storyItem.dataset.href;
+        if (authorStoryExpandedSet.has(storyHref)) authorStoryExpandedSet.delete(storyHref);
+        else authorStoryExpandedSet.add(storyHref);
+        renderAuthorList(currentAuthorList);
+        return;
+      }
+      var authorRow = e.target.closest('.author-row');
+      if (!authorRow || e.target !== authorRow) return;
+      e.preventDefault();
+      openAuthorPanel(authorRow.dataset.author, null);
+      return;
+    }
+
+    var row = e.target.closest('.row');
+    if (!row || e.target !== row) return;
+    e.preventDefault();
+    var href = row.dataset.href;
+    if (expandedSet.has(href)){
+      expandedSet.delete(href);
+      if (href === authorPanelTriggerHref) closeAuthorPanel();
+    } else {
+      expandedSet.add(href);
+    }
+    renderList(currentFiltered);
+  });
+
+  function escapeHtml(str){
+    var d = document.createElement('div');
+    d.textContent = str;
+    // innerHTML leaves " alone, which truncates attribute values such as
+    // data-author="BZ"2"" - escape it so names containing quotes survive.
+    return d.innerHTML.replace(/"/g, '&quot;');
+  }
+
+  function render(){
+    shown = pageSize;
+    updateScopeToggle();
+    updateSavedToggleLabel();
+    if (viewMode === 'authors'){
+      var pool = applyFilters();
+      var authorQuery = searchInput.value.trim().toLowerCase();
+      currentAuthorList = sortAuthorList(buildAuthorList(pool).filter(function(entry){
+        return authorEntryMatches(entry.name, authorQuery);
+      }));
+      renderAuthorList(currentAuthorList);
+    } else {
+      currentFiltered = filterStories();
+      renderList(currentFiltered);
+    }
+    var active = activeTags();
+    var excluded = excludedTags();
+    var rangesActive = wordFilter.active || addedFilter.active || updatedFilter.active;
+    clearBtn.hidden = active.length === 0 && excluded.length === 0 && !rangesActive;
+  }
+
+  var debounceTimer;
+  searchInput.addEventListener('input', function(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(render, 120);
+  });
+
+  clearBtn.addEventListener('click', function(){
+    searchInput.value = '';
+    tagCodes.forEach(function(c){
+      chips[c].dataset.state = 'none';
+      chips[c].classList.remove('active', 'excluded');
+    });
+    exemptFromExclusion.clear();
+    updateGroupBadges();
+    wordsSlider.reset(); wordFilter = {lo: wMin, hi: wMax, active: false};
+    addedSlider.reset(); addedFilter = {lo: aMin, hi: aMax, active: false};
+    updatedSlider.reset(); updatedFilter = {lo: uMin, hi: uMax, active: false};
+    render();
+  });
+
+  render();
+  } // end init()
+})();
+</script>
+<script>
+// Page-level "back to top" button (left of the theme button), shown once the page is scrolled down.
+(function(){
+  var btn = document.getElementById('page-totop');
+  if (!btn) return;
+  var THRESHOLD = 400;
+  var ticking = false;
+  function update(){
+    ticking = false;
+    var on = (window.pageYOffset || document.documentElement.scrollTop || 0) > THRESHOLD;
+    btn.classList.toggle('show', on);
+    btn.tabIndex = on ? 0 : -1;
+  }
+  window.addEventListener('scroll', function(){
+    if (!ticking){ ticking = true; window.requestAnimationFrame(update); }
+  }, {passive:true});
+  btn.addEventListener('click', function(){
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'});
+  });
+  update();
+})();
+</script>
+</body>
+</html>
